@@ -4,8 +4,8 @@
 #    email     :   fengidri@yeah.net
 #    version   :   1.0.1
 
-ln -s Xdefaults ~/.Xdefaults
-ln -s zshrc     ~/.zshrc
-ln -s fonts     ~/.fonts
+ln -s `pwd`/Xdefaults ~/.Xdefaults
+ln -s `pwd`/zshrc     ~/.zshrc
+ln -s `pwd`/fonts     ~/.fonts
 
 xrdb ~/.Xdefaults
