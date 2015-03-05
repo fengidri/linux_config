@@ -1,0 +1,232 @@
+xterm*cursorUnderLine:false
+xterm*cursor:left_side
+Xft.dpi:96     
+xpdf.title: PDF     
+XTerm*faceSize: 10     
+XTerm*faceSize1: 10     
+XTerm*faceSize2: 10     
+XTerm*faceSize3: 10     
+XTerm*faceSize4: 10     
+XTerm*faceSize5: 10     
+XTerm*faceSize6: 10     
+XTerm*jumpScroll: true     
+    
+xterm.termName: xterm-256color    
+xterm*scrollBar: false    
+xterm*rightScrollBar: true    
+xterm*loginshell: true    
+xterm*cursorBlink: false
+!xterm*background:   white    
+!xterm*foreground:   black    
+xterm*background:  white 
+xterm*foreground:   black
+xterm.borderLess: true    
+xterm.cursorBlink: true    
+xterm*colorUL: yellow    
+xterm*colorBD: white    
+     
+!fix alt key input    
+xterm*eightBitInput: false    
+xterm*altSendsEscape: true   
+  
+!mouse selecting to copy, ctrl-v to paste    
+!Ctrl p to print screen content to file    
+!serm*VT100.Translations: #override \    
+!      Ctrl <KeyPress> V: insert-selection(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\    
+!      <BtnUp>: select-end(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\    
+!      Ctrl <KeyPress> P: print() \n    
+    
+!font and locale    
+!xterm*locale: true    
+!xterm.utf8:     true    
+!xterm*utf8Title: true  
+xterm*fontMenu*fontdefault*Label: Default    
+xterm*faceName:DejaVu Sans Mono:antialias=True:pixelsize=13    
+!xterm*faceName: monofur:antialias=True:pixelsize=20    
+xter*boldFont: Bitstream Vera Sans Mono:style=Bold:pixelsize=13    
+xterm*faceNameDoublesize:WenQuanYi Zen Hei:antialias=True:pixelsize=13    
+xterm*xftAntialias: true    
+xterm.cjkWidth:true    
+XTerm*inputMethod: ibus   
+XTerm*preeditType: Root    
+
+
+
+
+
+
+
+
+
+
+
+!===============================
+! – Setting for xterm
+! ——————–
+XTerm*locale: true
+XTerm*utf8Title: true
+XTerm*fontMenu*fontdefault*Label: Default
+XTerm*faceName: Monaco:pixelsize=13
+!中文字体
+XTerm*faceNameDoublesize:Adobe Kaiti Std:pixelsize=13
+!中文输入
+XTerm.inputMethod: ibus
+XTerm.faceSize: 20
+XTerm.faceSize1: 20
+XTerm.faceSize2: 20
+XTerm.faceSize3: 20
+XTerm.faceSize4: 20
+XTerm.faceSize5: 20
+XTerm.faceSize6: 20
+XTerm.cjkWidth:true
+!XTerm.background: #C7EDCC
+!XTerm.foreground: #000000
+XTerm.scrollBar: true
+XTerm.allowBoldFonts:false
+XTerm.boldMode:false
+XTerm.rightScrollBar: true
+XTerm.jumpScroll: true
+XTerm.SaveLines: 1000
+
+!XTerm*VT100.Translations: #override \n\
+!Ctrl <KeyPress> V: insert-selection(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\
+<BtnUp>: select-end(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\
+Ctrl <KeyPress> P: print() \n
+
+!———————-
+!- End of setting Xterm
+!=========================
+!look and feel
+xterm.termName: xterm
+xterm.geometry: 80x36
+xterm*scrollBar: true
+xterm*rightScrollBar: true
+xterm*loginshell: true
+xterm*cursorBlink: flase
+
+!xterm*background:  black
+!xterm*foreground:  gray
+
+
+
+!fix alt key input
+xterm*eightBitInput: false
+xterm*altSendsEscape: true
+
+
+!print color and bold/underline attributes
+xterm*printAttributes: 2
+xterm*printerCommand: cat > ~/xtermdump
+
+
+!mouse selecting to copy, ctrl-v to paste
+!Ctrl p to print screen content to file
+!XTerm*VT100.Translations: #override \
+!    Ctrl <KeyPress> V: insert-selection(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\
+!    <BtnUp>: select-end(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\
+!    Ctrl <KeyPress> P: print() \n
+
+!font and locale
+xterm*locale: true
+xterm.utf8:     true
+xterm*utf8Title: true
+xterm*fontMenu*fontdefault*Label: Default
+!xterm*faceName:Bitstream Vera Sans Mono Roman:pixelsize=17:antialias=True
+!xterm*faceName: monofur:antialias=True:pixelsize=20
+!xterm*boldFont: WenQuanYi Zen Hei Mono:style=normal:antialias=True:pixelsize=19
+!xterm*faceNameDoublesize: WenQuanYi Zen Hei Mono:pixelsize=12:antialias=True
+xterm*xftAntialias: true
+xterm*cjkWidth:false 
+
+xterm.borderLess: flase
+
+!禁用粗体  如 man 中的
+!xterm*colorBDMode: true
+!xterm*colorBD: rgb:cc/ff/00
+!
+!!禁用下划线
+!xterm*colorULMode: true
+!xterm*colorUL: rgb:ff/66/00
+
+!调整行间距
+XTerm*scaleHeight: 1.01
+
+!去掉黑边
+xterm*borderWidth: 0
+
+!背影色
+xterm*background: #DCF0FF
+!xterm*background: #000000
+
+!前景色
+!XTerm*foreground: #ffffff
+!XTerm*foreground: rgb:b2/b2/b2
+
+!-- Tango color scheme
+!*xterm*color0: #2e3436
+!*xterm*color1: #000000
+!*xterm*color2: #4e9a06
+xterm*color3: #4848FF
+!*xterm*color4: #3465a4
+!*xterm*color5: #75507b
+!*xterm*color6: #0b939b
+!*xterm*color7: #d3d7cf
+!*xterm*color8: #555753
+!*xterm*color9: #ef2929
+!*xterm*color10: #8ae234
+!*xterm*color11: #fce94f
+!*xterm*color12: #729fcf
+!*xterm*color13: #ad7fa8
+!*xterm*color14: #00f5e9
+!*xterm*color15: #eeeeec
+!*xterm*color34: #eeeeec
+!*xterm*color31: #eeeeec
+
+!!!black
+!*color0 :            #222222
+!*color8 :            #709080
+!!!red
+!*color1 :            #B22222
+!*color9 :            #709080
+!!!green
+!*color2 :            #72D0A0
+!*color10:            #72D5A3
+!!yellow
+!*color3 :            #B8860B
+!*color11:            #F0DFAF
+!!blue
+!*color4 :            #4682B4
+!*color12:            #94BFF3
+!!magenta
+!*color5 :            #9932CC
+!*color13:            #EC93D3
+!!cyan
+!*color6 :            #87CEEB
+!*color14:            #93E0E3
+!!white
+!*color7 :            #C0C0C0
+!*color15:            #000000
+
+
+
+!前景 背景 颜色
+!---------------------------------------
+!30   40   黑色
+!31   41   紅色
+!32   42   綠色
+!33   43   黃色
+!34   44   藍色
+!35   45   紫紅色
+!36   46   青藍色
+!37   47   白色
+!
+!代码 意义
+!-------------------------
+!0    OFF
+!1    高亮显示
+!4    underline
+!5    闪烁
+!7    反白显示
+!8    不可见
+
+
