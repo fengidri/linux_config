@@ -9,3 +9,15 @@ ln -s `pwd`/zshrc     ~/.zshrc
 ln -s `pwd`/fonts     ~/.fonts
 
 xrdb ~/.Xdefaults
+
+packages = '
+autojump
+git
+'
+
+
+
+sudo pacman -Sy $packages
+
+
+git config --global core.editor='gvim -f'

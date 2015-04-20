@@ -1,4 +1,6 @@
 # Created by newuser for 4.3.12
+EDITOR=gvim
+
 #color{{{
 autoload colors zsh/terminfo
 if [[ "$terminfo[colors]" -ge 8 ]]; then
@@ -22,22 +24,24 @@ precmd () {
     FILLBAR="\${(l.(($COLUMNS - ($leftsize + $rightsize +2)))..${HBAR}.)}"
 
     RPROMPT=$(echo "%(?..$RED%?$FINISH)")
-    PROMPT=$(echo "$BLUE%M$GREEN%/ $WHITE${(e)FILLBAR} $MAGENTA%D %T$FINISH\n$CYAN%n $_YELLOW>>>$FINISH ")
+
+
+    PROMPT=$(echo "$BLUE%M$GREEN%/ $WHITE${(e)FILLBAR} $MAGENTA%D %T$FINISH\n$CYAN%n >>>$FINISH ")
 
     #在 Emacs终端 中使用 Zsh 的一些设置
     if [[ "$TERM" == "dumb" ]]; then
         setopt No_zle
         PROMPT='%n@%M %/\n>>'
         alias ls='ls -F'
-    fi    
+    fi
 }
 #}}}
 
 #标题栏、任务栏样式{{{
 case $TERM in (*xterm*|*rxvt*|(dt|k|E)term)
-   preexec () { 
-       #print -Pn "\e]0;%n@%M//%/\ $1\a" 
-       print -Pn "\e]0;$1 - %M %/\a" 
+   preexec () {
+       #print -Pn "\e]0;%n@%M//%/\ $1\a"
+       print -Pn "\e]0;$1 - %M %/\a"
        #print -Pn "\e]0;${PWD}\a" # change the title
    }
    ;;
@@ -54,17 +58,19 @@ export SAVEHIST=10000
 #以附加的方式写入历史纪录
 setopt INC_APPEND_HISTORY
 #如果连续输入的命令相同，历史纪录中只保留一个
-setopt HIST_IGNORE_DUPS     
-#为历史纪录中的命令添加时间戳     
-setopt EXTENDED_HISTORY     
+setopt HIST_IGNORE_DUPS
+#为历史纪录中的命令添加时间戳
+setopt EXTENDED_HISTORY
 
 #启用 cd 命令的历史纪录，cd -[TAB]进入历史路径
 setopt AUTO_PUSHD
 #相同的历史路径只保留一个
 setopt PUSHD_IGNORE_DUPS
 
+
+
 #在命令前添加空格，不将此命令添加到纪录文件中
-#setopt HIST_IGNORE_SPACE     
+#setopt HIST_IGNORE_SPACE
 #}}}
 
 #每个目录使用独立的历史纪录{{{
@@ -85,7 +91,7 @@ chpwd() {
 function allhistory { cat $HISTDIR/* }                                   #*/
 function convhistory {
             sort $1 | sed 's/^:\([ 0-9]*\):[0-9]*;\(.*\)/\1::::::\2/' |
-            awk -F"::::::" '{ $1=strftime("%Y-%m-%d %T",$1) "|"; print }' 
+            awk -F"::::::" '{ $1=strftime("%Y-%m-%d %T",$1) "|"; print }'
 }
 #使用 histall 命令查看全部历史纪录
 function histall { convhistory =(allhistory) |
@@ -96,18 +102,19 @@ function hist { convhistory $HISTFILE }
 #全部历史纪录 top55
 function top55 { allhistory | awk -F':[ 0-9]*:[0-9]*;' '{ $1="" ; print }' | sed 's/ /\n/g' | sed '/^$/d' | sort | uniq -c | sort -nr | head -n 55 }
 
+
 #}}}
 
 #杂项 {{{
 #允许在交互模式中使用注释  例如：
 #cmd #这是注释
-setopt INTERACTIVE_COMMENTS     
+setopt INTERACTIVE_COMMENTS
 
 #启用自动 cd，输入目录名回车进入目录
 #稍微有点混乱，不如 cd 补全实用
-#setopt AUTO_CD
-#setopt AUTO_LIST AUTO_MENU
-     
+setopt AUTO_CD
+setopt AUTO_LIST AUTO_MENU
+
 #扩展路径
 
 #禁用 core dumps
@@ -127,6 +134,10 @@ bindkey "^[5"  digit-argument
 bindkey "^[-"  neg-argument
 #以下字符视为单词的一部分
 WORDCHARS='*?_-[]~=&;!#$%^(){}<>'
+
+#  设置可以依据于已经输入的命令进行histroy过滤
+bindkey "^[[A" history-search-backward
+bindkey "^[[B" history-search-forward
 #}}}
 
 #自动补全功能 {{{
@@ -169,12 +180,12 @@ zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
 
 #修正大小写
 zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}'
-#错误校正     
+#错误校正
 zstyle ':completion:*' completer _complete _match _approximate
 zstyle ':completion:*:match:*' original only
 zstyle ':completion:*:approximate:*' max-errors 0 numeric
 
-#kill 命令补全     
+#kill 命令补全
 compdef pkill=killall
 zstyle ':completion:*:*:kill:*' menu yes select
 zstyle ':completion:*:*:*:*:processes' force-list always
@@ -204,6 +215,16 @@ zle_highlight=(region:bg=magenta #选中区域
 ##空行(光标在行首)补全 "cd " {{{
 user-complete(){
     case $BUFFER in
+        "/" )                       # 空行填入 "cd "
+            BUFFER="cd /"
+            zle end-of-line
+            zle expand-or-complete
+            ;;
+        ".." )                       # 空行填入 "cd "
+            BUFFER="cd ../"
+            zle end-of-line
+            zle expand-or-complete
+            ;;
         "" )                       # 空行填入 "cd "
             BUFFER="cd "
             zle end-of-line
@@ -251,7 +272,7 @@ zle -N sudo-command-line
 #定义快捷键为： [Esc] [Esc]
 bindkey "\e\e" sudo-command-line
 #}}}
- 
+
 #命令别名 {{{
 alias -g cp='cp -i'
 alias -g mv='mv -i'
@@ -260,9 +281,30 @@ alias -g ls='ls -F --color=auto'
 alias -g ll='ls -l'
 alias -g grep='grep -E --color=auto'
 alias -g psgrep='ps -e |grep '
-alias -g ee='emacsclient -t'
+
+alias -g gc='git commit -a '
+alias -g gs='git status'
+alias -g gp='git push'
+alias -g gl="git log --graph \
+    --pretty=format:'%Cred%h%Creset\
+         -%C(yellow)%d%Creset %s %Cgreen(%cr)\
+         %C(bold blue)<%an>%Creset'\
+    --abbrev-commit --"
+
 alias -g his='history -fi 1000 | grep '
-alias -g ssh_dpmt_ntx='ssh root@192.168.33.153 -p 30000'
+# 文件自动打开
+alias -s html=$EDITOR
+alias -s rb=$EDITOR
+alias -s js=$EDITOR
+alias -s c=$EDITOR
+alias -s java=$EDITOR
+alias -s txt=$EDITOR
+alias -s cap=wireshark
+alias -s gz='tar -xzvf'
+alias -s tgz='tar -xzvf'
+alias -s bz2='tar -xjvf'
+alias -s xz='tar -xJvf'
+alias -s zip='unzip -x'
 
 #alias -g chromium='chromium --password-store=basic'
 #alias -g luatex='~/.luatex/bin/linux/luatex'
@@ -285,7 +327,7 @@ hash -d X="/etc/X11"
 hash -d HIST="$HISTDIR"
 
 #}}}
-   
+
 #{{{自定义补全
 #补全 ping
 #zstyle ':completion:*:ping:*' hosts 192.168.128.1{38,} http://www.g.cn \
@@ -324,3 +366,55 @@ LS_COLORS='rs=0:di=01;35:ln=01;95:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:c
 
 export PYTHONPATH="/home/feng/works/python-script/python/"
 export SVN_EDITOR="gvim --nofork"
+# 在安装了新的程序之后, zsh 并不会立即进行refresh. 下面的命令可以auto. 但
+#是我怀疑这样做是不是合适, 且先用一段时间
+setopt nohashdirs
+
+
+
+
+
+
+
+
+
+
+setopt extended_glob
+TOKENS_FOLLOWED_BY_COMMANDS=('|' '||' ';' '&' '&&' 'sudo' 'do' 'time' 'strace' 'man')
+
+#语法高亮
+recolor-cmd() {
+    region_highlight=()
+    colorize=true
+    start_pos=0
+    for arg in ${(z)BUFFER}; do
+        ((start_pos+=${#BUFFER[$start_pos+1,-1]}\
+            -${#${BUFFER[$start_pos+1,-1]## #}}))
+        ((end_pos=$start_pos+${#arg}))
+        if $colorize; then
+            colorize=false
+            res=$(LC_ALL=C builtin type $arg 2>/dev/null)
+            case $res in
+                *'reserved word'*)   style="fg=magenta,bold";;
+                *'alias for'*)       style="fg=cyan,bold";;
+                *'shell builtin'*)   style="fg=blue,bold";;
+                *'shell function'*)  style='fg=green,bold';;
+                *"$arg is"*)
+                    [[ $arg = 'sudo' ]] && style="fg=red,bold"\
+                                  || style="fg=blue,bold";;
+                *)                   style='none,bold';;
+            esac
+            region_highlight+=("$start_pos $end_pos $style")
+        fi
+        [[ ${${TOKENS_FOLLOWED_BY_COMMANDS[(r)${arg//|/\|}]}:+yes} = 'yes' ]]\
+            && colorize=true
+        start_pos=$end_pos
+    done
+}
+
+check-cmd-self-insert() { zle .self-insert && recolor-cmd }
+check-cmd-backward-delete-char() { zle .backward-delete-char && recolor-cmd }
+
+zle -N self-insert check-cmd-self-insert
+zle -N backward-delete-char check-cmd-backward-delete-char
+
