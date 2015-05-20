@@ -16,17 +16,21 @@ FINISH="%{$terminfo[sgr0]%}"
 
 #命令提示符 {{{
 precmd () {
-    local count_db_wth_char=${#${${(%):-%/}//[[:ascii:]]/}}
-    local leftsize=${#${(%):-%M%/}}+$count_db_wth_char
-    local rightsize=${#${(%):-%D %T }}
+    local zero='%([BSUbfksu]|([FB]|){*})'
+
+    local gitbranch=$RED$(git branch 2>/dev/null |\grep '*'|cut -d' ' -f 2)
+    local left="$BLUE%M$GREEN%/ $gitbranch  "
+    local right="$MAGENTA%D %T"
+    local newline="$CYAN%n >>>$FINISH"
     HBAR=""
 
-    FILLBAR="\${(l.(($COLUMNS - ($leftsize + $rightsize +2)))..${HBAR}.)}"
+    local leftsize=${#${(S%%)left//$~zero/}}
+    local rightsize=${#${(S%%)right//$~zero/}}
 
-    RPROMPT=$(echo "%(?..$RED%?$FINISH)")
+    FILLBAR="\${(l.(($COLUMNS - ($leftsize + $rightsize)))..${HBAR}.)}"
+    local mid=$WHITE${(e)FILLBAR}
 
-
-    PROMPT=$(echo "$BLUE%M$GREEN%/ $WHITE${(e)FILLBAR} $MAGENTA%D %T$FINISH\n$CYAN%n >>>$FINISH ")
+    PROMPT="$left$mid$right$newline"
 
     #在 Emacs终端 中使用 Zsh 的一些设置
     if [[ "$TERM" == "dumb" ]]; then
@@ -34,6 +38,14 @@ precmd () {
         PROMPT='%n@%M %/\n>>'
         alias ls='ls -F'
     fi
+    #local count_db_wth_char=${#${${(%):-%/}//[[:ascii:]]/}}
+    #local leftsize=${#${(%):-%M%/}}+$count_db_wth_char+${#${(S%%)gitbranch//$~zero/}}
+    #local rightsize=${#${(%):-%D %T }}
+    #FILLBAR="\${(l.(($COLUMNS - ($leftsize + $rightsize +2)))..${HBAR}.)}"
+    #RPROMPT=$(echo "%(?..$RED%?$FINISH)")
+    #PROMPT=$(echo "$BLUE%M$GREEN%/ $gitbranch\n$CYAN%n >>>$FINISH ")
+    #PROMPT=$(echo "$BLUE%M$GREEN%/ $gitbranch$WHITE${(e)FILLBAR} $MAGENTA%D %T$FINISH\n$CYAN%n >>>$FINISH ")
+    #PROMPT=$(echo "$left$mid$right\n$CYAN%n >>>$FINISH ")
 }
 #}}}
 
@@ -278,8 +290,8 @@ alias -g cp='cp -i'
 alias -g mv='mv -i'
 alias -g rm='rm -I'
 alias -g ls='ls -F --color=auto'
-alias -g ll='ls -l'
-alias -g grep='grep -E --color=auto'
+alias -g ll='ls -lh'
+alias -g grep='grep -n -E --color=auto --binary-file=without-match'
 alias -g psgrep='ps -e |grep '
 
 alias -g gc='git commit -a '
