@@ -51,7 +51,7 @@ precmd () {
     local gitst="$(GitStatus)"
 
 
-    local left="$YELLOW%M$gitst$GREEN%/ "
+    local left="$YELLOW%M$gitst$GREEN%~"
     local right="$MAGENTA%D %T"
     local newline="$CYAN%n >>>$FINISH"
     HBAR=""
@@ -62,7 +62,7 @@ precmd () {
     FILLBAR="\${(l.(($COLUMNS - ($leftsize + $rightsize)))..${HBAR}.)}"
     local mid=$WHITE${(e)FILLBAR}
 
-    PROMPT="$(echo "$left$mid$right$FINISH\n$newline")"
+    PROMPT="$(echo "$_WHITE$left$mid$right$FINISH\n$newline")"
 
     #在 Emacs终端 中使用 Zsh 的一些设置
     if [[ "$TERM" == "dumb" ]]; then
