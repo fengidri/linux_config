@@ -1,25 +1,56 @@
 # Created by newuser for 4.3.12
 EDITOR=gvim
+function GitStatus(){
+    gitst=$(git status --porcelain --branch 2>/dev/null)
+    if [[ "$gitst" == "" ]]; then
+        exit 0;
+    fi
+python2  << EOF
+branch='master'
+remote=''
+clean=''
+st = """$gitst"""
+lines = st.split('\n')
+for line in lines:
+    if line.startswith('##'):
+        t = line.split()
+        branch = t[1].split('...')[0]
+        if len(t) == 4:
+            s = t[2][1:]
+            n = t[3][0:-1]
+            remote = ' -%s'
+            if s == 'ahead':
+                remote = ' +%s'
+            remote = remote % n
+        break
+if len(lines) != 1:
+    clean = '|X'
+print ' %s%s%s ' % (branch, remote, clean)
+EOF
+}
 
 #color{{{
 autoload colors zsh/terminfo
 if [[ "$terminfo[colors]" -ge 8 ]]; then
     colors
 fi
-for color in RED GREEN YELLOW BLUE MAGENTA CYAN WHITE; do
-    eval _$color='%{$terminfo[bold]$fg[${(L)color}]%}'
+for color in BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE; do
+    eval __$color='%{$terminfo[bold]$fg[${(L)color}]%}'
     eval $color='%{$fg[${(L)color}]%}'
+    eval _$color='%{$bg[${(L)color}]%}'
     (( count = $count + 1 ))
 done
 FINISH="%{$terminfo[sgr0]%}"
 #}}}
+#
 
 #命令提示符 {{{
 precmd () {
     local zero='%([BSUbfksu]|([FB]|){*})'
+    local gitst="$(GitStatus)"
 
-    local gitbranch=$RED$(git branch 2>/dev/null |\grep '*'|cut -d' ' -f 2)
-    local left="$BLUE%M$GREEN%/ $gitbranch  "
+
+    local left="$YELLOW%M$gitst$GREEN%/ "
     local right="$MAGENTA%D %T"
     local newline="$CYAN%n >>>$FINISH"
     HBAR=""
@@ -30,7 +61,7 @@ precmd () {
     FILLBAR="\${(l.(($COLUMNS - ($leftsize + $rightsize)))..${HBAR}.)}"
     local mid=$WHITE${(e)FILLBAR}
 
-    PROMPT="$left$mid$right$newline"
+    PROMPT="$(echo "$left$mid$right$FINISH\n$newline")"
 
     #在 Emacs终端 中使用 Zsh 的一些设置
     if [[ "$TERM" == "dumb" ]]; then
