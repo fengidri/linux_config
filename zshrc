@@ -1,11 +1,12 @@
 # Created by newuser for 4.3.12
 EDITOR=gvim
 function GitStatus(){
-    gitst=$(git status --porcelain --branch 2>/dev/null)
+    gitst=$(LANG=en_US.UTF-8 git status --porcelain --branch 2>/dev/null)
     if [[ "$gitst" == "" ]]; then
         exit 0;
     fi
 python2  << EOF
+#encoding: utf8
 branch='master'
 remote=''
 clean=''
@@ -315,26 +316,27 @@ zle -N sudo-command-line
 #定义快捷键为： [Esc] [Esc]
 bindkey "\e\e" sudo-command-line
 #}}}
-
+if [[ "x$(uname)" != 'xDarwin' ]];then
 #命令别名 {{{
-alias -g cp='cp -i'
-alias -g mv='mv -i'
-alias -g rm='rm -I'
-alias -g ls='ls -F --color=auto'
-alias -g ll='ls -lh'
-alias -g grep='grep -n -E --color=auto --binary-file=without-match'
-alias -g psgrep='ps -e |grep '
+    alias -g cp='cp -i'
+    alias -g mv='mv -i'
+    alias -g rm='rm -I'
+    alias -g ls='ls -F --color=auto'
+    alias -g ll='ls -lh'
+    alias -g grep='grep -n -E --color=auto --binary-file=without-match'
+    alias -g psgrep='ps -e |grep '
 
-alias -g gc='git commit -a '
-alias -g gs='git status'
-alias -g gp='git push'
-alias -g gl="git log --graph \
-    --pretty=format:'%Cred%h%Creset\
-         -%C(yellow)%d%Creset %s %Cgreen(%cr)\
-         %C(bold blue)<%an>%Creset'\
-    --abbrev-commit --"
+    alias -g gc='git commit -a '
+    alias -g gs='git status'
+    alias -g gp='git push'
+    alias -g gl="git log --graph \
+        --pretty=format:'%Cred%h%Creset\
+             -%C(yellow)%d%Creset %s %Cgreen(%cr)\
+             %C(bold blue)<%an>%Creset'\
+        --abbrev-commit --"
 
-alias -g his='history -fi 1000 | grep '
+    alias -g his='history -fi 1000 | grep '
+fi
 # 文件自动打开
 alias -s html=$EDITOR
 alias -s rb=$EDITOR
