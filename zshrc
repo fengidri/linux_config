@@ -1,7 +1,7 @@
 # Created by newuser for 4.3.12
 EDITOR=gvim
 function GitStatus(){
-    gitst=$(LANG=en_US.UTF-8 git status --porcelain --branch 2>/dev/null)
+    gitst=$(LANG=en_US git status --porcelain --branch 2>/dev/null)
     if [[ "$gitst" == "" ]]; then
         exit 0;
     fi
