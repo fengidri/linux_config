@@ -1,5 +1,6 @@
 # Created by newuser for 4.3.12
 EDITOR=gvim
+#funs{{{
 function GitStatus(){
     gitst=$(LANG=en_US git status --porcelain --branch 2>/dev/null)
     if [[ "$gitst" == "" ]]; then
@@ -16,6 +17,10 @@ for line in lines:
     if line.startswith('##'):
         t = line.split()
         branch = t[1].split('...')[0]
+        if len(branch) > 20:
+            if branch.startswith('feature/'):
+                branch = branch.split('/')[1]
+            branch = branch[-20:]
         if len(t) == 4:
             s = t[2][1:]
             n = t[3][0:-1]
@@ -26,9 +31,11 @@ for line in lines:
         break
 if len(lines) != 1:
     clean = '|X'
+#print ' %s%s[0;31;46m%s%s ' % (branch, chr(27), remote, clean)
 print ' %s%s%s ' % (branch, remote, clean)
 EOF
 }
+#}}}
 
 #color{{{
 autoload colors zsh/terminfo
@@ -43,15 +50,13 @@ for color in BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE; do
 done
 FINISH="%{$terminfo[sgr0]%}"
 #}}}
-#
 
 #命令提示符 {{{
 precmd () {
     local zero='%([BSUbfksu]|([FB]|){*})'
     local gitst="$(GitStatus)"
 
-
-    local left="$YELLOW%M$gitst$GREEN%~"
+    local left="$YELLOW%M$_GREEN$gitst$FINISH$CYAN%~ $FINISH"
     local right="$MAGENTA%D %T"
     local newline="$CYAN%n >>>$FINISH"
     HBAR=""
@@ -61,6 +66,8 @@ precmd () {
 
     FILLBAR="\${(l.(($COLUMNS - ($leftsize + $rightsize)))..${HBAR}.)}"
     local mid=$WHITE${(e)FILLBAR}
+    echo $left > /tmp/xxx
+    echo $right >> /tmp/xxx
 
     PROMPT="$(echo "$_WHITE$left$mid$right$FINISH\n$newline")"
 
@@ -337,6 +344,7 @@ if [[ "x$(uname)" != 'xDarwin' ]];then
 
     alias -g his='history -fi 1000 | grep '
 fi
+
 # 文件自动打开
 alias -s html=$EDITOR
 alias -s rb=$EDITOR
@@ -398,7 +406,6 @@ bindkey "^[[11~" arith-eval-echo
 
 ####{{{
 function timeconv { date -d @$1 +"%Y-%m-%d %T" }
-
 # }}}
 
 ## END OF FILE #################################################################
@@ -413,7 +420,7 @@ export PYTHONPATH="/home/feng/works/python-script/python/"
 export SVN_EDITOR="gvim --nofork"
 # 在安装了新的程序之后, zsh 并不会立即进行refresh. 下面的命令可以auto. 但
 #是我怀疑这样做是不是合适, 且先用一段时间
-setopt nohashdirs
+#setopt nohashdirs
 
 
 
