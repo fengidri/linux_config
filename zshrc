@@ -6,7 +6,7 @@ function GitStatus(){
     if [[ "$gitst" == "" ]]; then
         exit 0;
     fi
-python2  << EOF
+python2 << EOF
 #encoding: utf8
 branch='master'
 remote=''
@@ -343,6 +343,7 @@ if [[ "x$(uname)" != 'xDarwin' ]];then
         --abbrev-commit --"
 
     alias -g his='history -fi 1000 | grep '
+    alias -g ts='trafficserver '
 fi
 
 # 文件自动打开
