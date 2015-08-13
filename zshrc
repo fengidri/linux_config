@@ -331,7 +331,7 @@ if [[ "x$(uname)" != 'xDarwin' ]];then
     alias -g ls='ls -F --color=auto'
     alias -g ll='ls -lh'
     alias -g grep='grep -n -E --color=auto --binary-file=without-match'
-    alias -g psgrep='ps -e |grep '
+    alias -g pg='ps h -eo pid,euser,command |\grep '
 
     alias -g gc='git commit -a '
     alias -g gs='git status'
@@ -344,6 +344,8 @@ if [[ "x$(uname)" != 'xDarwin' ]];then
 
     alias -g his='history -fi 1000 | grep '
     alias -g ts='trafficserver '
+    alias -g F=' | percol'
+    alias -g pg='ps h -eo pid,euser,command | percol'
 fi
 
 # 文件自动打开
@@ -389,10 +391,12 @@ hash -d HIST="$HISTDIR"
 zstyle ':completion:*:ping:*' hosts http://www.g.cn  192.168.{1,0}.1 www.sina.com
 
 #补全 ssh scp sftp 等
-my_accounts=(
-root@NTX
-)
-zstyle ':completion:*:my-accounts' users-hosts $my_accounts
+#my_accounts=()
+#zstyle ':completion:*:my-accounts' users-hosts $my_accounts
+
+#[ -f ~/.ssh/config ] && : ${(A)ssh_config_hosts:=${${${${(@M)${(f)"$(<~/.ssh/config)"}:#Host *}#Host }:#*\**}:#*\?*}}
+[ -f ~/.ssh/config ] && ssh_config_hosts=($(grep "^Host" ~/.ssh/config| awk '{print $2}'))
+zstyle ':completion:*:*:*' hosts $ssh_config_hosts
 
 #}}}
 
@@ -447,16 +451,17 @@ recolor-cmd() {
         if $colorize; then
             colorize=false
             res=$(LC_ALL=C builtin type $arg 2>/dev/null)
-            case $res in
-                *'reserved word'*)   style="fg=magenta,bold";;
-                *'alias for'*)       style="fg=cyan,bold";;
-                *'shell builtin'*)   style="fg=blue,bold";;
-                *'shell function'*)  style='fg=green,bold';;
-                *"$arg is"*)
-                    [[ $arg = 'sudo' ]] && style="fg=red,bold"\
-                                  || style="fg=blue,bold";;
-                *)                   style='none,bold';;
-            esac
+            #case $res in
+            #    *'reserved word'*)   style="fg=magenta,bold";;
+            #    *'alias for'*)       style="fg=cyan,bold";;
+            #    *'shell builtin'*)   style="fg=blue,bold";;
+            #    *'shell function'*)  style='fg=green,bold';;
+            #    *"$arg is"*)
+            #        [[ $arg = 'sudo' ]] && style="fg=red,bold"\
+            #                      || style="fg=blue,bold";;
+            #    *)                   style='none,bold';;
+            #esac
+            style="fg=blue,bold";
             region_highlight+=("$start_pos $end_pos $style")
         fi
         [[ ${${TOKENS_FOLLOWED_BY_COMMANDS[(r)${arg//|/\|}]}:+yes} = 'yes' ]]\
