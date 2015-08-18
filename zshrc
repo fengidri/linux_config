@@ -346,6 +346,7 @@ if [[ "x$(uname)" != 'xDarwin' ]];then
     alias -g ts='trafficserver '
     alias -g F=' | percol'
     alias -g pg='ps h -eo pid,euser,command | percol'
+    alias -g action=''
 fi
 
 # 文件自动打开
