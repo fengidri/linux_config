@@ -56,7 +56,7 @@ precmd () {
     local zero='%([BSUbfksu]|([FB]|){*})'
     local gitst="$(GitStatus)"
 
-    local left="$YELLOW%M$_GREEN$gitst$FINISH$CYAN%~ $FINISH"
+    local left="$YELLOW%M$GREEN$gitst$FINISH$CYAN%~ $FINISH"
     local right="$MAGENTA%D %T"
     local newline="$CYAN%n >>>$FINISH"
     HBAR=""
@@ -69,7 +69,7 @@ precmd () {
     echo $left > /tmp/xxx
     echo $right >> /tmp/xxx
 
-    PROMPT="$(echo "$_WHITE$left$mid$right$FINISH\n$newline")"
+    PROMPT="$(echo "$WHITE$left$mid$right$FINISH\n$newline")"
 
     #在 Emacs终端 中使用 Zsh 的一些设置
     if [[ "$TERM" == "dumb" ]]; then
