@@ -325,7 +325,6 @@ if [[ "x$(uname)" == 'xLinux' ]];then
     alias -g ls='ls -F --color=auto'
     alias -g ll='ls -lh'
     alias -g grep='grep -n -E --color=auto --binary-file=without-match'
-    alias -g pg='ps h -eo pid,euser,command |\grep '
 
 
     alias -g his='history -fi 1000 | grep '
@@ -388,6 +387,9 @@ if [[ "x$(uname)" == 'xDarwin' ]];then
     alias -g ll='ls -Glh'
 
 fi
+
+alias -g pg='\ps h -eo pid,euser,command | percol'
+alias -g ps='\ps h -eo pid,euser,command|\grep -E --color=auto --binary-file=without-match '
 alias -g gc='git commit -a '
 alias -g gs='git status'
 alias -g gp='git push'
