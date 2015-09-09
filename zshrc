@@ -35,6 +35,14 @@ if len(lines) != 1:
 print ' %s%s%s ' % (branch, remote, clean)
 EOF
 }
+
+function Jobs(){
+    local n=$(jobs | \grep '^\[' | wc -l)
+    #if [ "X$n" -ge "X0" ]; then
+    #    return 0;
+    #fi
+    echo "Jobs: $n "
+}
 #}}}
 
 #color{{{
@@ -56,7 +64,7 @@ precmd () {
     local zero='%([BSUbfksu]|([FB]|){*})'
     local gitst="$(GitStatus)"
 
-    local left="$YELLOW%M$GREEN$gitst$FINISH$CYAN%~ $FINISH"
+    local left="$YELLOW%M$GREEN$gitst$FINISH$BLUE$(Jobs)$FINISH$CYAN%~ $FINISH"
     local right="$MAGENTA%D %T"
     local newline="$CYAN%n >>>$FINISH"
     HBAR=""
