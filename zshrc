@@ -222,12 +222,6 @@ zstyle ':completion:*' expand 'yes'
 zstyle ':completion:*' squeeze-slashes 'yes'
 zstyle ':completion::complete:*' '\\'
 
-#彩色补全菜单
-eval $(dircolors -b)
-export ZLSCOLORS="${LS_COLORS}"
-zmodload zsh/complist
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
 
 #修正大小写
 zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}'
@@ -323,8 +317,8 @@ zle -N sudo-command-line
 #定义快捷键为： [Esc] [Esc]
 bindkey "\e\e" sudo-command-line
 #}}}
-if [[ "x$(uname)" != 'xDarwin' ]];then
-#命令别名 {{{
+
+if [[ "x$(uname)" == 'xLinux' ]];then
     alias -g cp='cp -i'
     alias -g mv='mv -i'
     alias -g rm='rm -I'
@@ -333,21 +327,75 @@ if [[ "x$(uname)" != 'xDarwin' ]];then
     alias -g grep='grep -n -E --color=auto --binary-file=without-match'
     alias -g pg='ps h -eo pid,euser,command |\grep '
 
-    alias -g gc='git commit -a '
-    alias -g gs='git status'
-    alias -g gp='git push'
-    alias -g gl="git log --graph \
-        --pretty=format:'%Cred%h%Creset\
-             -%C(yellow)%d%Creset %s %Cgreen(%cr)\
-             %C(bold blue)<%an>%Creset'\
-        --abbrev-commit --"
 
     alias -g his='history -fi 1000 | grep '
-    alias -g ts='trafficserver '
     alias -g F=' | percol'
     alias -g pg='ps h -eo pid,euser,command | percol'
-    alias -g action=''
+
+	#彩色补全菜单
+	eval $(dircolors -b)
+	export ZLSCOLORS="${LS_COLORS}"
+	zmodload zsh/complist
+	zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+	zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+
+
 fi
+
+function ssh(){
+    Profile=SSH
+    echo -e "\033]50;SetProfile=$Profile\x7"
+    export ITERM_PROFILE=$Profile
+
+    /usr/bin/ssh $*
+
+    Profile=Default
+    echo -e "\033]50;SetProfile=$Profile\x7"
+    export ITERM_PROFILE=$Profile
+}
+
+function arch(){
+    P='/Users/fengidri/vagrant/archlinux/'
+
+    Profile=ArchLinux
+    echo -e "\033]50;SetProfile=$Profile\x7"
+    export ITERM_PROFILE=$Profile
+
+    /usr/bin/ssh vagrant@127.0.0.1 -p 2222 \
+        -o Compression=yes -o DSAAuthentication=yes \
+        -o LogLevel=FATAL -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        -o IdentitiesOnly=yes \
+        -i $P.vagrant/machines/default/virtualbox/private_key
+
+    Profile=Default
+    echo -e "\033]50;SetProfile=$Profile\x7"
+    export ITERM_PROFILE=$Profile
+}
+
+function archvim(){
+    P='/Users/fengidri/vagrant/archlinux/'
+
+    /usr/bin/ssh vagrant@127.0.0.1 -p 2222 \
+        -o Compression=yes -o DSAAuthentication=yes \
+        -o LogLevel=FATAL -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        -o IdentitiesOnly=yes \
+        -i $P.vagrant/machines/default/virtualbox/private_key -t bash -l -c 'vim'
+}
+if [[ "x$(uname)" == 'xDarwin' ]];then
+    alias -g ls='ls -G'
+    alias -g ll='ls -Glh'
+
+fi
+alias -g gc='git commit -a '
+alias -g gs='git status'
+alias -g gp='git push'
+alias -g gl="git log --graph \
+    --pretty=format:'%Cred%h%Creset\
+         -%C(yellow)%d%Creset %s %Cgreen(%cr)\
+         %C(bold blue)<%an>%Creset'\
+    --abbrev-commit --"
 
 # 文件自动打开
 alias -s html=$EDITOR
