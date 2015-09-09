@@ -331,7 +331,6 @@ if [[ "x$(uname)" != 'xDarwin' ]];then
     alias -g ls='ls -F --color=auto'
     alias -g ll='ls -lh'
     alias -g grep='grep -n -E --color=auto --binary-file=without-match'
-    alias -g pg='ps h -eo pid,euser,command |\grep '
 
     alias -g gc='git commit -a '
     alias -g gs='git status'
@@ -345,7 +344,10 @@ if [[ "x$(uname)" != 'xDarwin' ]];then
     alias -g his='history -fi 1000 | grep '
     alias -g ts='trafficserver '
     alias -g F=' | percol'
-    alias -g pg='ps h -eo pid,euser,command | percol'
+
+    alias -g pg='\ps h -eo pid,euser,command | percol'
+    alias -g ps='\ps h -eo pid,euser,command|\grep -E --color=auto --binary-file=without-match '
+
     alias -g action=''
 fi
 
