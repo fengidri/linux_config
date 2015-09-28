@@ -1,4 +1,3 @@
-# Created by newuser for 4.3.12
 EDITOR=gvim
 #funs{{{
 function GitStatus(){
@@ -205,6 +204,7 @@ setopt AUTO_MENU
 #开启此选项，补全时会直接选中菜单项
 #setopt MENU_COMPLETE
 
+
 autoload -U compinit
 compinit
 
@@ -256,6 +256,19 @@ zstyle ':completion:*:corrections' format $'\e[01;32m -- %d (errors: %e) --\e[0m
 
 # cd ~ 补全顺序
 zstyle ':completion:*:-tilde-:*' group-order 'named-directories' 'path-directories' 'users' 'expand'
+
+#补全 ping
+#zstyle ':completion:*:ping:*' hosts 192.168.128.1{38,} http://www.g.cn \
+#       192.168.{1,0}.1{{7..9},}
+zstyle ':completion:*:ping:*' hosts http://www.g.cn  192.168.{1,0}.1 www.sina.com
+
+#补全 ssh scp sftp 等
+#my_accounts=()
+#zstyle ':completion:*:my-accounts' users-hosts $my_accounts
+
+#[ -f ~/.ssh/config ] && : ${(A)ssh_config_hosts:=${${${${(@M)${(f)"$(<~/.ssh/config)"}:#Host *}#Host }:#*\**}:#*\?*}}
+[ -f ~/.ssh/config ] && ssh_config_hosts=($(grep "^Host" ~/.ssh/config| awk '{print $2}'))
+zstyle ':completion:*:*:*' hosts $ssh_config_hosts
 #}}}
 
 ##行编辑高亮模式 {{{
@@ -326,28 +339,13 @@ zle -N sudo-command-line
 bindkey "\e\e" sudo-command-line
 #}}}
 
-if [[ "x$(uname)" == 'xLinux' ]];then
-    alias -g cp='cp -i'
-    alias -g mv='mv -i'
-    alias -g rm='rm -I'
-    alias -g ls='ls -F --color=auto'
-    alias -g ll='ls -lh'
-    alias -g grep='grep -n -E --color=auto --binary-file=without-match'
 
-
-    alias -g his='history -fi 1000 | grep '
-    alias -g F=' | percol'
-    alias -g pg='ps h -eo pid,euser,command | percol'
-
-	#彩色补全菜单
-	eval $(dircolors -b)
-	export ZLSCOLORS="${LS_COLORS}"
-	zmodload zsh/complist
-	zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-	zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
-
-
-fi
+function frain(){
+    if [[ "X$1" == "X" ]];then
+        return
+    fi
+    vim -c "Frain $1"
+}
 
 function ssh(){
     Profile=SSH
@@ -369,11 +367,12 @@ function arch(){
     export ITERM_PROFILE=$Profile
 
     /usr/bin/ssh vagrant@127.0.0.1 -p 2222 \
-        -o Compression=yes -o DSAAuthentication=yes \
+        -o DSAAuthentication=yes \
         -o LogLevel=FATAL -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile=/dev/null \
         -o IdentitiesOnly=yes \
         -i $P.vagrant/machines/default/virtualbox/private_key
+        #-o Compression=yes
 
     Profile=Default
     echo -e "\033]50;SetProfile=$Profile\x7"
@@ -390,12 +389,36 @@ function archvim(){
         -o IdentitiesOnly=yes \
         -i $P.vagrant/machines/default/virtualbox/private_key -t bash -l -c 'vim'
 }
+
+################################################################################
 if [[ "x$(uname)" == 'xDarwin' ]];then
     alias -g ls='ls -G'
     alias -g ll='ls -Glh'
 
 fi
 
+if [[ "x$(uname)" == 'xLinux' ]];then
+    alias -g cp='cp -i'
+    alias -g mv='mv -i'
+    alias -g rm='rm -I'
+    alias -g ls='ls -F --color=auto'
+    alias -g ll='ls -lh'
+    alias -g grep='grep -n -E --color=auto --binary-file=without-match'
+
+
+    alias -g his='history -fi 1000 | grep '
+    alias -g F=' | percol'
+    alias -g pg='ps h -eo pid,euser,command | percol'
+
+	#彩色补全菜单
+	eval $(dircolors -b)
+	export ZLSCOLORS="${LS_COLORS}"
+	zmodload zsh/complist
+	zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+	zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+fi
+
+alias -g curl='curl -o /dev/null -sqv '
 alias -g pg='\ps h -eo pid,euser,command | percol'
 alias -g ps='\ps h -eo pid,euser,command|\grep -E --color=auto --binary-file=without-match '
 alias -g gc='git commit -a '
@@ -444,18 +467,6 @@ hash -d HIST="$HISTDIR"
 #}}}
 
 #{{{自定义补全
-#补全 ping
-#zstyle ':completion:*:ping:*' hosts 192.168.128.1{38,} http://www.g.cn \
-#       192.168.{1,0}.1{{7..9},}
-zstyle ':completion:*:ping:*' hosts http://www.g.cn  192.168.{1,0}.1 www.sina.com
-
-#补全 ssh scp sftp 等
-#my_accounts=()
-#zstyle ':completion:*:my-accounts' users-hosts $my_accounts
-
-#[ -f ~/.ssh/config ] && : ${(A)ssh_config_hosts:=${${${${(@M)${(f)"$(<~/.ssh/config)"}:#Host *}#Host }:#*\**}:#*\?*}}
-[ -f ~/.ssh/config ] && ssh_config_hosts=($(grep "^Host" ~/.ssh/config| awk '{print $2}'))
-zstyle ':completion:*:*:*' hosts $ssh_config_hosts
 
 #}}}
 
@@ -476,7 +487,13 @@ function timeconv { date -d @$1 +"%Y-%m-%d %T" }
 # vim:filetype=zsh foldmethod=marker autoindent expandtab shiftwidth=4
 #
 
-LS_COLORS='rs=0:di=01;35:ln=01;95:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;91:*.tar=01;31:*.tgz=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.lz=01;31:*.xz=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.axv=01;35:*.anx=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.axa=00;36:*.oga=00;36:*.spx=00;36:*.xspf=00;36:'
+LS_COLORS='rs=0:di=01;35:ln=01;95:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01'
+LS_COLORS=$LS_COLORS':cd=40;33;01:or=40;31;01:su=37;41:sg=30;43:ca=30;41'
+LS_COLORS=$LS_COLORS':tw=30;42:ow=34;42:st=37;44:ex=01;91:*.tar=01;31:'
+LS_COLORS=$LS_COLORS'*.tgz=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31'
+LS_COLORS=$LS_COLORS':*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.zip=01;31'
+LS_COLORS=$LS_COLORS':*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.lz=01;31'
+LS_COLORS=$LS_COLORS':*.xz=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.axv=01;35:*.anx=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.axa=00;36:*.oga=00;36:*.spx=00;36:*.xspf=00;36:'
 #LS_COLORS='rs=0:di=00;35:ln=00;36:mh=00:pi=40;33:so=00;35:do=00;35:bd=40;33;00:cd=40;33;00:or=40;31;00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=00;91:*.tar=00;31:*.tgz=00;31:*.arj=00;31:*.taz=00;31:*.lzh=00;31:*.lzma=00;31:*.tlz=00;31:*.txz=00;31:*.zip=00;31:*.z=00;31:*.Z=00;31:*.dz=00;31:*.gz=00;31:*.lz=00;31:*.xz=00;31:*.bz2=00;31:*.bz=00;31:*.tbz=00;31:*.tbz2=00;31:*.tz=00;31:*.deb=00;31:*.rpm=00;31:*.jar=00;31:*.war=00;31:*.ear=00;31:*.sar=00;31:*.rar=00;31:*.ace=00;31:*.zoo=00;31:*.cpio=00;31:*.7z=00;31:*.rz=00;31:*.jpg=00;35:*.jpeg=00;35:*.gif=00;35:*.bmp=00;35:*.pbm=00;35:*.pgm=00;35:*.ppm=00;35:*.tga=00;35:*.xbm=00;35:*.xpm=00;35:*.tif=00;35:*.tiff=00;35:*.png=00;35:*.svg=00;35:*.svgz=00;35:*.mng=00;35:*.pcx=00;35:*.mov=00;35:*.mpg=00;35:*.mpeg=00;35:*.m2v=00;35:*.mkv=00;35:*.webm=00;35:*.ogm=00;35:*.mp4=00;35:*.m4v=00;35:*.mp4v=00;35:*.vob=00;35:*.qt=00;35:*.nuv=00;35:*.wmv=00;35:*.asf=00;35:*.rm=00;35:*.rmvb=00;35:*.flc=00;35:*.avi=00;35:*.fli=00;35:*.flv=00;35:*.gl=00;35:*.dl=00;35:*.xcf=00;35:*.xwd=00;35:*.yuv=00;35:*.cgm=00;35:*.emf=00;35:*.axv=00;35:*.anx=00;35:*.ogv=00;35:*.ogx=00;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.axa=00;36:*.oga=00;36:*.spx=00;36:*.xspf=00;36:'
 
 
@@ -534,4 +551,35 @@ check-cmd-backward-delete-char() { zle .backward-delete-char && recolor-cmd }
 
 zle -N self-insert check-cmd-self-insert
 zle -N backward-delete-char check-cmd-backward-delete-char
+
+function up_get_ip(){
+python2 << EOF
+import os
+home = os.environ.get('HOME')
+path = os.path.join(home, '.uphostconfig')
+hostname = '$1'
+hostname = hostname.lower()
+if hostname:
+    for line in open(path).readlines():
+        tt = line.split()
+        if len(tt) <= 1:
+            continue
+        if hostname == tt[0].lower():
+            print tt[1]
+            break
+EOF
+}
+function upssh()
+{
+    local host=$(up_get_ip $1)
+    if [[ "x$host" == "x" ]] then
+        echo 'Not found ip in .uphostconfig'
+        return
+    fi
+    /usr/bin/ssh root@$host -p 65422
+}
+
+fpath=($HOME/.zsh/completion $fpath)
+autoload -U _upssh
+compdef _upssh upssh
 

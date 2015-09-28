@@ -1,0 +1,62 @@
+#compdef upssh
+#compdef ss
+
+#_arguments \
+#    {-f,-r}'[-f FORMAT, -r FORMAT, Specify input format]' \
+#    {-t,-w}'[-t FORMAT, -w FORMAT, Specify output format]' \
+#    {-o,--output}'[-o FILE, --output=FILE, Write output to FILE instead of stdout]' \
+#    {-h,--help}'[Show usage message]' \
+#    {-v,--version}'[Print version]'
+#    #'*:files:_files'
+
+
+_upssh_hosts(){
+    #print $(awk '{printf $1" "}' $HOME/.uphostconfig)
+    awk '{printf $1" "}' $HOME/.uphostconfig
+}
+
+_upssh() {
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    _arguments \
+        '1: :->hosts'\
+        '*: :->city'
+
+    case $state in
+        hosts)
+            #hosts=(${=${(f)hosts}##${~$hosts)
+            #_multi_parts ' ' 'ab cd ef'  && return 0
+            #_arguments '1:Hosts:$hosts'
+
+            _values -s ' ' "Hosts" $(_upssh_hosts)
+
+
+            #hosts=("${hosts}")
+            #for h in $hosts
+            #do
+            #    _values 'Hosts' $h"ms"
+            #done
+            #_values 'Hosts' "ab"
+            #_values 'Hosts' "cd"
+            #_values 'Hosts' "hd" "hf"
+            #_values -s ' ' 'Hosts' "xd dxf"
+            ;;
+        *)
+            case $words[2] in
+                France)
+                    compadd "$@" Paris Lyon Marseille
+                    ;;
+                Germany)
+                    compadd "$@" Berlin Munich Dresden
+                    ;;
+                Italy)
+                    compadd "$@" Rome Napoli Palermo
+                    ;;
+                *)
+                    _files
+            esac
+    esac
+}
+
+_upssh "$@"
