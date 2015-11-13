@@ -1,0 +1,22 @@
+[user]
+	email = fengidri@gmail.com
+	name = fengidri
+[push]
+	default = simple
+[core]
+	excludesfile = /home/vagrant/.gitignore
+
+[alias]
+    co = checkout
+    ss = status
+    cm = commit -m
+    br = branch
+    bm = branch -m
+    bd = branch -D
+    cb = checkout -b
+    df = diff
+    ls = log --stat
+    lp = log -p
+    plo = pull origin
+    plode = pull origin develop
+    pho = push origin

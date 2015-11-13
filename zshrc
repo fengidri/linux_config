@@ -40,7 +40,9 @@ function Jobs(){
     #if [ "X$n" -ge "X0" ]; then
     #    return 0;
     #fi
-    echo "Jobs: $n "
+    if [ "x$n" != "x0" ]; then
+        echo "Jobs: $n "
+    fi
 }
 #}}}
 
@@ -63,7 +65,7 @@ precmd () {
     local zero='%([BSUbfksu]|([FB]|){*})'
     local gitst="$(GitStatus)"
 
-    local left="$YELLOW%M$GREEN$gitst$FINISH$BLUE$(Jobs)$FINISH$CYAN%~ $FINISH"
+    local left="$YELLOW%M$GREEN$gitst$FINISH$RED$(Jobs)$FINISH$CYAN%~ $FINISH"
     local right="$MAGENTA%D %T"
     local newline="$CYAN%n >>>$FINISH"
     HBAR=""
@@ -76,7 +78,8 @@ precmd () {
     echo $left > /tmp/xxx
     echo $right >> /tmp/xxx
 
-    PROMPT="$(echo "$WHITE$left$mid$right$FINISH\n$newline")"
+    #PROMPT="$(echo "$WHITE$left$mid$right$FINISH\n$newline")"
+    PROMPT="$(echo "$WHITE$left$FINISH\n$newline")"
 
     #在 Emacs终端 中使用 Zsh 的一些设置
     if [[ "$TERM" == "dumb" ]]; then
@@ -205,6 +208,7 @@ setopt AUTO_MENU
 #setopt MENU_COMPLETE
 
 
+fpath=($HOME/.zsh/completion $fpath)
 autoload -U compinit
 compinit
 
@@ -344,7 +348,8 @@ function frain(){
     if [[ "X$1" == "X" ]];then
         return
     fi
-    vim -c "Frain $1"
+    cd $1
+    vim -c "Frain ."
 }
 
 function ssh(){
@@ -374,6 +379,12 @@ function arch(){
         -i $P.vagrant/machines/default/virtualbox/private_key
         #-o Compression=yes
 
+    if [[ "X$?" == "X255" ]]
+then
+	cd $p
+	vagrant up
+fi
+
     Profile=Default
     echo -e "\033]50;SetProfile=$Profile\x7"
     export ITERM_PROFILE=$Profile
@@ -394,7 +405,7 @@ function archvim(){
 if [[ "x$(uname)" == 'xDarwin' ]];then
     alias -g ls='ls -G'
     alias -g ll='ls -Glh'
-
+    alias -g python2=python
 fi
 
 if [[ "x$(uname)" == 'xLinux' ]];then
@@ -403,7 +414,6 @@ if [[ "x$(uname)" == 'xLinux' ]];then
     alias -g rm='rm -I'
     alias -g ls='ls -F --color=auto'
     alias -g ll='ls -lh'
-    alias -g grep='grep -n -E --color=auto --binary-file=without-match'
 
 
     alias -g his='history -fi 1000 | grep '
@@ -418,10 +428,16 @@ if [[ "x$(uname)" == 'xLinux' ]];then
 	zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
 fi
 
+function grep(){
+    /usr/bin/grep -E --color=auto --binary-file=without-match $@
+}
+
 alias -g curl='curl -o /dev/null -sqv '
-alias -g pg='\ps h -eo pid,euser,command | percol'
-alias -g ps='\ps h -eo pid,euser,command|\grep -E --color=auto --binary-file=without-match '
+alias -g pp='\ps h -eo pid,euser,command|\grep -E --color=auto --binary-file=without-match '
+
 alias -g gc='git commit -a '
+alias -g gco='git checkout  '
+alias -g gcob='git checkout  -b '
 alias -g gs='git status'
 alias -g gp='git push'
 alias -g gl="git log --graph \
@@ -429,6 +445,12 @@ alias -g gl="git log --graph \
          -%C(yellow)%d%Creset %s %Cgreen(%cr)\
          %C(bold blue)<%an>%Creset'\
     --abbrev-commit --"
+
+function p(){
+    \ps h -eo pid,euser,command |\
+        \grep -v \grep | \
+        \grep -E --color=auto --binary-file=without-match $1
+}
 
 # 文件自动打开
 alias -s html=$EDITOR
@@ -579,7 +601,13 @@ function upssh()
     /usr/bin/ssh root@$host -p 65422
 }
 
-fpath=($HOME/.zsh/completion $fpath)
-autoload -U _upssh
-compdef _upssh upssh
+#autoload -U _upssh _upquery
+#compdef _upssh upssh
+#compdef _ssh upscp
+#compdef _upquery upquery
+
+
+export DEV=1
+
+
 

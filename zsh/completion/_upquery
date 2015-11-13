@@ -1,0 +1,19 @@
+#compdef upquery
+_upquery() {
+    local -a commands
+    commands=(
+    'metadata:lookup metadata'
+    'source:lookup url source'
+    'elasticsearch:query elasticsearch'
+    'purge-record:show purge record'
+    'add-to-purge:add url to purge tasks'
+    )
+
+    if (( CURRENT == 2 )); then
+        _describe -t commands 'commands' commands
+    fi
+
+    return 0
+}
+
+_upquery "#@"
