@@ -67,7 +67,9 @@ precmd () {
 
     local left="$YELLOW%M$GREEN$gitst$FINISH$RED$(Jobs)$FINISH$CYAN%~ $FINISH"
     local right="$MAGENTA%D %T"
-    local newline="$CYAN%n >>>$FINISH"
+    local TTY=$(tty)
+    TTY=${TTY:9}
+    local newline="$CYAN%n-$TTY>>$FINISH"
     HBAR=""
 
     local leftsize=${#${(S%%)left//$~zero/}}
@@ -405,7 +407,6 @@ function archvim(){
 if [[ "x$(uname)" == 'xDarwin' ]];then
     alias -g ls='ls -G'
     alias -g ll='ls -Glh'
-    alias -g python2=python
 fi
 
 if [[ "x$(uname)" == 'xLinux' ]];then
@@ -432,7 +433,7 @@ function grep(){
     /usr/bin/grep -E --color=auto --binary-file=without-match $@
 }
 
-alias -g curl='curl -o /dev/null -sqv '
+#alias -g curl='curl -o /dev/null -sqv '
 alias -g pp='\ps h -eo pid,euser,command|\grep -E --color=auto --binary-file=without-match '
 
 alias -g gc='git commit -a '
@@ -574,40 +575,5 @@ check-cmd-backward-delete-char() { zle .backward-delete-char && recolor-cmd }
 zle -N self-insert check-cmd-self-insert
 zle -N backward-delete-char check-cmd-backward-delete-char
 
-function up_get_ip(){
-python2 << EOF
-import os
-home = os.environ.get('HOME')
-path = os.path.join(home, '.uphostconfig')
-hostname = '$1'
-hostname = hostname.lower()
-if hostname:
-    for line in open(path).readlines():
-        tt = line.split()
-        if len(tt) <= 1:
-            continue
-        if hostname == tt[0].lower():
-            print tt[1]
-            break
-EOF
-}
-function upssh()
-{
-    local host=$(up_get_ip $1)
-    if [[ "x$host" == "x" ]] then
-        echo 'Not found ip in .uphostconfig'
-        return
-    fi
-    /usr/bin/ssh root@$host -p 65422
-}
 
-#autoload -U _upssh _upquery
-#compdef _upssh upssh
-#compdef _ssh upscp
-#compdef _upquery upquery
-
-
-export DEV=1
-
-
-
+source .upyun/upyun

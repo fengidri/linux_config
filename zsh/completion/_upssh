@@ -24,7 +24,7 @@ _upssh() {
             #_arguments '1:Hosts:$hosts'
             #_values -s ' ' "Hosts" $hosts
 
-            _values -s ' ' "Hosts" $(awk '{printf $1" "}' $HOME/.uphostconfig)
+            _values -s ' ' "Hosts" $(awk '{printf $1" "}' $HOME/.upyun/hostconfig)
             ;;
         *)
             case $words[2] in
