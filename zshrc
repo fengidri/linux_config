@@ -183,10 +183,11 @@ setopt AUTO_LIST AUTO_MENU
 #禁用 core dumps
 limit coredumpsize 0
 
-#Emacs风格 键绑定
+#vim风格 键绑定
 bindkey -v
 #设置 [DEL]键 为向后删除
 bindkey "\e[3~" delete-char
+bindkey "^R" history-incremental-search-backward
 
 #Alt
 bindkey "^[1"  digit-argument
