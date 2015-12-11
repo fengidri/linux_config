@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [[ "x$1" == 'xc' ]]
+then
+	cat /dev/stdin | /usr/bin/ssh fengidri@10.0.2.2 pbcopy
+else
+	/usr/bin/ssh fengidri@10.0.2.2 pbpaste
+fi
+
