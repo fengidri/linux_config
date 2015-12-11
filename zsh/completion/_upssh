@@ -24,7 +24,8 @@ _upssh() {
             #_arguments '1:Hosts:$hosts'
             #_values -s ' ' "Hosts" $hosts
 
-            _values -s ' ' "Hosts" $(awk '{printf $1" "}' $HOME/.upyun/hostconfig)
+            _values -s ' ' "Recent" $(python2 $HOME/.upyun/upyun.py complete recent)
+            _values -s ' ' "Hosts" $(python2 $HOME/.upyun/upyun.py complete host)
             ;;
         *)
             case $words[2] in

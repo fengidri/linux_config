@@ -77,8 +77,6 @@ precmd () {
 
     FILLBAR="\${(l.(($COLUMNS - ($leftsize + $rightsize)))..${HBAR}.)}"
     local mid=$WHITE${(e)FILLBAR}
-    echo $left > /tmp/xxx
-    echo $right >> /tmp/xxx
 
     #PROMPT="$(echo "$WHITE$left$mid$right$FINISH\n$newline")"
     PROMPT="$(echo "$WHITE$left$FINISH\n$newline")"
@@ -153,14 +151,22 @@ chpwd() {
 
 function allhistory { cat $HISTDIR/* }                                   #*/
 function convhistory {
-            sort $1 | sed 's/^:\([ 0-9]*\):[0-9]*;\(.*\)/\1::::::\2/' |
-            awk -F"::::::" '{ $1=strftime("%Y-%m-%d %T",$1) "|"; print }'
+            sort $1 | sed 's/^:\([ 0-9]*\):[0-9]*;\(.*\)/\1::::::\2/'
+            #|
+            #awk -F"::::::" '{ $1=strftime("%Y-%m-%d %T",$1) "|"; print }'
 }
 #使用 histall 命令查看全部历史纪录
 function histall { convhistory =(allhistory) |
             sed '/^.\{20\} *cd/i\\' }
 #使用 hist 查看当前目录历史纪录
-function hist { convhistory $HISTFILE }
+function h {
+    echo $?
+    if [[ "x$?" == "x2" ]]; then
+        convhistory $HISTFILE  | grep $1
+        return
+    fi
+    convhistory $HISTFILE
+}
 
 #全部历史纪录 top55
 function top55 { allhistory | awk -F':[ 0-9]*:[0-9]*;' '{ $1="" ; print }' | sed 's/ /\n/g' | sed '/^$/d' | sort | uniq -c | sort -nr | head -n 55 }
@@ -346,6 +352,9 @@ zle -N sudo-command-line
 bindkey "\e\e" sudo-command-line
 #}}}
 
+function blog(){
+    vim -c "TexList"
+}
 
 function frain(){
     if [[ "X$1" == "X" ]];then
@@ -577,4 +586,7 @@ zle -N self-insert check-cmd-self-insert
 zle -N backward-delete-char check-cmd-backward-delete-char
 
 
-source .upyun/upyun
+source $HOME/.upyun/upyun
+
+alias paste='ssh fengidri@10.0.2.2 pbpaste'
+alias copy='ssh fengidri@10.0.2.2 pbcopy'
