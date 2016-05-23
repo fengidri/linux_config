@@ -5,6 +5,7 @@
 	default = simple
 [core]
 	excludesfile = /home/vagrant/.gitignore
+	editor = vim
 
 [alias]
     co = checkout

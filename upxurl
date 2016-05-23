@@ -1,0 +1,11 @@
+
+name=$(date '+%s').$RANDOM.$RANDOM
+
+upx cd /blog
+curl $1 -o /tmp/_upxurl
+upx put /tmp/_upxurl $name
+
+
+
+echo 'http://cdn.fengidri.me/blog/'$name
+echo '\img{http://cdn.fengidri.me/blog/'$name'}'

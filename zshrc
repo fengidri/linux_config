@@ -361,7 +361,7 @@ function frain(){
         return
     fi
     cd $1
-    vim -c "Frain ."
+    vim -c "Frain $(pwd)"
 }
 
 function ssh(){
@@ -456,6 +456,9 @@ alias -g gl="git log --graph \
          -%C(yellow)%d%Creset %s %Cgreen(%cr)\
          %C(bold blue)<%an>%Creset'\
     --abbrev-commit --"
+function curl(){
+    /usr/bin/curl -o /dev/null $@
+}
 
 function p(){
     \ps h -eo pid,euser,command |\
@@ -588,5 +591,3 @@ zle -N backward-delete-char check-cmd-backward-delete-char
 
 source $HOME/.upyun/upyun
 
-alias paste='ssh fengidri@10.0.2.2 pbpaste'
-alias copy='ssh fengidri@10.0.2.2 pbcopy'
