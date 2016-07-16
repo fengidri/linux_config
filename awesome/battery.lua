@@ -15,6 +15,8 @@ local function trim(s)
   return s:find'^%s*$' and '' or s:match'^%s*(.*%S)'
 end
 
+local mybattmon = wibox.widget.textbox()
+
 local function bat_notification()
   local f_capacity = assert(io.open("/sys/class/power_supply/BAT0/capacity", "r"))
   local f_status = assert(io.open("/sys/class/power_supply/BAT0/status", "r"))
@@ -30,31 +32,15 @@ local function bat_notification()
       , position   = "bottom_right"
     })
   end
+
+  mybattmon:set_text(" Battery:" .. bat_capacity .. "% ")
 end
 
-battimer = timer({timeout = 60})
+battimer = timer({timeout = 10})
 battimer:connect_signal("timeout", bat_notification)
 battimer:start()
 
 
-
--- returns a string with battery info
-function battery_status ()
-  local f_capacity = assert(io.open("/sys/class/power_supply/BAT0/capacity", "r"))
-  local bat_capacity = tonumber(f_capacity:read("*all"))
-  return bat_capacity
-end
-
-
 -- the widget
-mybattmon = wibox.widget.textbox()
-
-
--- Hook called every second
-function hook_timer ()
-    --mytextbox.text = " " .. os.date() .. " "
-    mybattmon:set_text(" Battery:" .. battery_status() .. " ")
-end
-hook_timer()
 
 table.insert(vars.right_widgets, mybattmon)
