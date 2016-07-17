@@ -57,10 +57,10 @@ if beautiful.wallpaper then
 end
 -- }}}
 
--- {{{ Tags
--- Define a tag table which hold all screen tags.
-tags = require("tags")
--- }}}
+local buttons = require("buttons")
+local keys = require('keys')
+require('rules')
+require("tags")
 
 
 mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon,
@@ -73,8 +73,6 @@ menubar.utils.terminal = terminal -- Set the terminal for applications that requ
 -- {{{ Wibox
 -- Create a textclock widget
 
-local buttons = require("buttons")
-local keys = require('keys')
 
 mytextclock = awful.widget.textclock()
 -- Create a wibox for each screen and add it
@@ -134,7 +132,6 @@ end
 -- }}}
 
 
-require('rules')
 
 
 -- {{{ Signals

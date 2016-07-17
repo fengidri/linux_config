@@ -36,7 +36,7 @@ local function bat_notification()
   mybattmon:set_text(" Battery:" .. bat_capacity .. "% ")
 end
 
-battimer = timer({timeout = 10})
+battimer = timer({timeout = 60})
 battimer:connect_signal("timeout", bat_notification)
 battimer:start()
 

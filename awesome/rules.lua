@@ -6,10 +6,12 @@
 -- description  :
 --
 
-local buttons = require("buttons")
-local keys = require('keys')
 local awful = require("awful")
 local beautiful = require("beautiful")
+
+local buttons = require("buttons")
+local keys = require('keys')
+
 -- {{{ Rules
 -- Rules to apply to new clients (through the "manage" signal).
 awful.rules.rules = {
@@ -20,7 +22,8 @@ awful.rules.rules = {
     focus = awful.client.focus.filter,
     raise = true,
     keys = keys.client,
-    buttons = buttons.client } },
+    buttons = buttons.client
+} },
     { rule = { class = "MPlayer" },
     properties = { floating = true } },
     { rule = { class = "pinentry" },

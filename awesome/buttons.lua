@@ -10,6 +10,8 @@ local awful = require("awful")
 local vars = require("vars")
 local buttons = {}
 
+local modkey = "Mod4"
+
 buttons.taglist = awful.util.table.join(
                     awful.button({ }, 1, awful.tag.viewonly),
                     awful.button({ modkey }, 1, awful.client.movetotag),
