@@ -1,39 +1,10 @@
+
+
+
 EDITOR=gvim
-#funs{{{
-function GitStatus(){
-    gitst=$(LANG=en_US git status --porcelain --branch 2>/dev/null)
-    if [[ "$gitst" == "" ]]; then
-        exit 0;
-    fi
-python2 << EOF
-#encoding: utf8
-branch='master'
-remote=''
-clean=''
-st = """$gitst"""
-lines = st.split('\n')
-for line in lines:
-    if line.startswith('##'):
-        t = line.split()
-        branch = t[1].split('...')[0]
-        if len(branch) > 20:
-            if branch.startswith('feature/'):
-                branch = branch.split('/')[1]
-            branch = branch[-20:]
-        if len(t) == 4:
-            s = t[2][1:]
-            n = t[3][0:-1]
-            remote = ' -%s'
-            if s == 'ahead':
-                remote = ' +%s'
-            remote = remote % n
-        break
-if len(lines) != 1:
-    clean = '|X'
-#print ' %s%s[0;31;46m%s%s ' % (branch, chr(27), remote, clean)
-print ' %s%s%s ' % (branch, remote, clean)
-EOF
-}
+
+source .zsh/git.rc
+
 
 function Jobs(){
     local n=$(jobs | \grep '^\[' | wc -l)
@@ -63,7 +34,7 @@ FINISH="%{$terminfo[sgr0]%}"
 #命令提示符 {{{
 precmd () {
     local zero='%([BSUbfksu]|([FB]|){*})'
-    local gitst="$(GitStatus)"
+    local gitst="$(GIT \gs)"
 
     local left="$YELLOW%M$GREEN$gitst$FINISH$RED$(Jobs)$FINISH$CYAN%~ $FINISH"
     local right="$MAGENTA%D %T"
@@ -414,48 +385,14 @@ function archvim(){
 }
 
 ################################################################################
-if [[ "x$(uname)" == 'xDarwin' ]];then
-    alias -g ls='ls -G'
-    alias -g ll='ls -Glh'
-fi
-
-if [[ "x$(uname)" == 'xLinux' ]];then
-    alias -g cp='cp -i'
-    alias -g mv='mv -i'
-    alias -g rm='rm -I'
-    alias -g ls='ls -F --color=auto'
-    alias -g ll='ls -lh'
-
-
-    alias -g his='history -fi 1000 | grep '
-    alias -g F=' | percol'
-    alias -g pg='ps h -eo pid,euser,command | percol'
-
-	#彩色补全菜单
-	eval $(dircolors -b)
-	export ZLSCOLORS="${LS_COLORS}"
-	zmodload zsh/complist
-	zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-	zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
-fi
 
 function grep(){
     /usr/bin/grep -E --color=auto --binary-file=without-match $@
 }
 
 #alias -g curl='curl -o /dev/null -sqv '
-alias -g pp='\ps h -eo pid,euser,command|\grep -E --color=auto --binary-file=without-match '
+alias  pp='\ps h -eo pid,euser,command|\grep -E --color=auto --binary-file=without-match '
 
-alias -g gc='git commit -a '
-alias -g gco='git checkout  '
-alias -g gcob='git checkout  -b '
-alias -g gs='git status'
-alias -g gp='git push'
-alias -g gl="git log --graph \
-    --pretty=format:'%Cred%h%Creset\
-         -%C(yellow)%d%Creset %s %Cgreen(%cr)\
-         %C(bold blue)<%an>%Creset'\
-    --abbrev-commit --"
 function curl(){
     /usr/bin/curl -o /dev/null $@
 }
@@ -466,30 +403,14 @@ function p(){
         \grep -E --color=auto --binary-file=without-match $1
 }
 
-# 文件自动打开
-alias -s html=$EDITOR
-alias -s rb=$EDITOR
-alias -s js=$EDITOR
-alias -s c=$EDITOR
-alias -s java=$EDITOR
-alias -s txt=$EDITOR
-alias -s cap=wireshark
-alias -s gz='tar -xzvf'
-alias -s tgz='tar -xzvf'
-alias -s bz2='tar -xjvf'
-alias -s xz='tar -xJvf'
-alias -s zip='unzip -x'
+source $HOME/.zsh/alias.rc
 
 #alias -g chromium='chromium --password-store=basic'
 #alias -g luatex='~/.luatex/bin/linux/luatex'
 
 #[Esc][h] man 当前命令时，显示简短说明
-alias run-help >&/dev/null && unalias run-help
 autoload run-help
 
-#历史命令 top10
-alias top10='print -l  ${(o)history%% *} | uniq -c | sort -nr | head -n 10'
-#}}}
 
 #路径别名 {{{
 #进入相应的路径时只要 cd ~xxx

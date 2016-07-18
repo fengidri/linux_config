@@ -1,0 +1,44 @@
+
+# 文件自动打开
+alias -s html=$EDITOR
+alias -s rb=$EDITOR
+alias -s js=$EDITOR
+alias -s c=$EDITOR
+alias -s java=$EDITOR
+alias -s txt=$EDITOR
+alias -s cap=wireshark
+alias -s gz='tar -xzvf'
+alias -s tgz='tar -xzvf'
+alias -s bz2='tar -xjvf'
+alias -s xz='tar -xJvf'
+alias -s zip='unzip -x'
+
+alias run-help >&/dev/null && unalias run-help
+#历史命令 top10
+alias top10='print -l  ${(o)history%% *} | uniq -c | sort -nr | head -n 10'
+#}}}
+
+if [[ "x$(uname)" == 'xDarwin' ]];then
+    alias -g ls='ls -G'
+    alias -g ll='ls -Glh'
+fi
+
+if [[ "x$(uname)" == 'xLinux' ]];then
+    alias cp='cp -i'
+    alias mv='mv -i'
+    alias rm='rm -I'
+    alias ls='ls -F --color=auto'
+    alias ll='ls -lh'
+
+
+    alias his='history -fi 1000 | grep '
+    alias F=' | percol'
+    alias pg='ps h -eo pid,euser,command | percol'
+
+	#彩色补全菜单
+	eval $(dircolors -b)
+	export ZLSCOLORS="${LS_COLORS}"
+	zmodload zsh/complist
+	zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+	zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+fi
