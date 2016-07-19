@@ -124,10 +124,10 @@ xterm*printerCommand: cat > ~/xtermdump
 
 !mouse selecting to copy, ctrl-v to paste
 !Ctrl p to print screen content to file
-!XTerm*VT100.Translations: #override \
-!    Ctrl <KeyPress> V: insert-selection(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\
-!    <BtnUp>: select-end(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\
-!    Ctrl <KeyPress> P: print() \n
+XTerm*VT100.Translations: #override \
+    Super <KeyPress> V: insert-selection(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\
+    <BtnUp>: select-end(CLIPBOARD,PRIMARY,CUT_BUFFER0) \n\
+    Super <KeyPress> P: print() \n
 
 
 !禁用粗体  如 man 中的
