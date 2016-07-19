@@ -35,7 +35,7 @@ class Git(object):
 
         self.is_gitdir = True
 
-        self.clear = len(lines) != 1
+        self.clear = len(lines) == 1
 
         info = lines[0].strip().split(' ', 2)
 
@@ -45,12 +45,13 @@ class Git(object):
             self.branch_remote = br[1]
 
         if len(info) == 3:
-            gs = info[2][1:-1].split()
-            if gs[0] == 'behind':
-                self.behind = int(gs[1])
+            for s in info[2][1:-1].split(','):
+                gs = s.split()
+                if gs[0] == 'behind':
+                    self.behind = int(gs[1])
 
-            if gs[0] == 'ahead':
-                self.ahead = int(gs[1])
+                if gs[0] == 'ahead':
+                    self.ahead = int(gs[1])
 
 
 def gs(args):

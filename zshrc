@@ -3,7 +3,7 @@
 
 EDITOR=gvim
 
-source .zsh/git.rc
+source $HOME/.zsh/git.rc
 
 
 function Jobs(){
