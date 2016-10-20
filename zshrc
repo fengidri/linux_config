@@ -332,6 +332,9 @@ function frain(){
         return
     fi
     cd $1
+    if [[ -n $TMUX ]] then
+        tmux rename-window $(basename $(pwd))
+    fi
     vim -c "Frain $(pwd)"
 }
 
@@ -510,5 +513,5 @@ zle -N self-insert check-cmd-self-insert
 zle -N backward-delete-char check-cmd-backward-delete-char
 
 
-source $HOME/.upyun/upyun
+#source $HOME/.upyun/upyun
 

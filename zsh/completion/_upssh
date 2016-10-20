@@ -1,46 +1,20 @@
 #compdef upssh
-#compdef ss
 
-#_arguments \
-#    {-f,-r}'[-f FORMAT, -r FORMAT, Specify input format]' \
-#    {-t,-w}'[-t FORMAT, -w FORMAT, Specify output format]' \
-#    {-o,--output}'[-o FILE, --output=FILE, Write output to FILE instead of stdout]' \
-#    {-h,--help}'[Show usage message]' \
-#    {-v,--version}'[Print version]'
-#    #'*:files:_files'
+HOSTS=$(cat $HOME/.upyun/lists/*|grep ansible_ssh_host |grep '#' -v | awk -F'[ =]' '{printf("%s/%s\n"), $1,$NF}' | tr '\n' ' ')
+HOSTS="$HOSTS"
 
 _upssh() {
     local curcontext="$curcontext" state line
     typeset -A opt_args
 
     _arguments \
-        '1: :->hosts'\
-        '*: :->city'
+        '1: :->hosts'
 
     case $state in
         hosts)
             #hosts=(${=${(f)hosts}##${~$hosts)
-            #_multi_parts ' ' 'ab cd ef'  && return 0
-            #_arguments '1:Hosts:$hosts'
-            #_values -s ' ' "Hosts" $hosts
-
-            _values -s ' ' "Recent" $(python2 $HOME/.upyun/upyun.py complete recent)
-            _values -s ' ' "Hosts" $(python2 $HOME/.upyun/upyun.py complete host)
+            _values "HOSTS" $(echo $HOSTS)
             ;;
-        *)
-            case $words[2] in
-                France)
-                    compadd "$@" Paris Lyon Marseille
-                    ;;
-                Germany)
-                    compadd "$@" Berlin Munich Dresden
-                    ;;
-                Italy)
-                    compadd "$@" Rome Napoli Palermo
-                    ;;
-                *)
-                    _files
-            esac
     esac
 }
 
