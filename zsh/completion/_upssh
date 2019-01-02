@@ -1,1 +1,21 @@
-/home/feng/upyun/upssh/shell/zsh/_upssh
+#compdef upssh
+
+HOSTS=$(cat $HOME/.upyun/lists/*|grep ansible_ssh_host |grep '#' -v | awk -F'[ =]' '{printf("%s/%s\n"), $1,$NF}' | tr '\n' ' ')
+HOSTS="$HOSTS"
+
+_upssh() {
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    _arguments \
+        '1: :->hosts'
+
+    case $state in
+        hosts)
+            #hosts=(${=${(f)hosts}##${~$hosts)
+            _values "HOSTS" $(echo $HOSTS)
+            ;;
+    esac
+}
+
+_upssh "$@"
