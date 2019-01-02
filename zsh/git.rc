@@ -5,6 +5,7 @@ alias gco='git checkout  '
 alias gcob='git checkout  -b '
 alias gs='git status'
 alias gp='GIT gp'
+alias gh='git rev-parse --verify HEAD'
 alias gl="git log --graph \
     --pretty=format:'%Cred%h%Creset\
          -%C(yellow)%d%Creset %s %Cgreen(%cr)\

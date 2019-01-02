@@ -161,7 +161,10 @@ setopt AUTO_LIST AUTO_MENU
 limit coredumpsize 0
 
 #vim风格 键绑定
-bindkey -v
+if [[ "X$VIM" == "X" ]];then
+    # no inside the vim term
+    bindkey -v
+fi
 #设置 [DEL]键 为向后删除
 bindkey "\e[3~" delete-char
 bindkey "^R" history-incremental-search-backward
@@ -335,17 +338,6 @@ function frain(){
     vim -c "Frain $(pwd)"
 }
 
-function ssh(){
-    Profile=SSH
-    echo -e "\033]50;SetProfile=$Profile\x7"
-    export ITERM_PROFILE=$Profile
-
-    /usr/bin/ssh $*
-
-    Profile=Default
-    echo -e "\033]50;SetProfile=$Profile\x7"
-    export ITERM_PROFILE=$Profile
-}
 
 function arch(){
     P='/Users/fengidri/vagrant/archlinux/'
@@ -390,12 +382,13 @@ function grep(){
     /usr/bin/grep -E --color=auto --binary-file=without-match $@
 }
 
-#alias -g curl='curl -o /dev/null -sqv '
-alias  pp='\ps h -eo pid,euser,command|\grep -E --color=auto --binary-file=without-match '
+alias -g http='curl -o /dev/null -sqv '
+alias pp='\ps h -eo pid,euser,command|grep -v grep|\grep -E --color=auto --binary-file=without-match '
+alias py=python2
 
-function curl(){
-    /usr/bin/curl -o /dev/null $@
-}
+#function curl(){
+#    /usr/bin/curl -o /dev/null $@
+#}
 
 function p(){
     \ps h -eo pid,euser,command |\
@@ -511,4 +504,4 @@ zle -N backward-delete-char check-cmd-backward-delete-char
 
 
 source $HOME/.upyun/upyun
-
+export PATH=$PATH:/usr/local/texlive/2016/bin/x86_64-linux
