@@ -1,9 +1,8 @@
-
-
 export PATH=/usr/local/bin/:$PATH
 EDITOR=gvim
 
 source $HOME/.zsh/git.rc
+source $HOME/.zsh/vimode.rc
 
 
 function Jobs(){
@@ -36,7 +35,9 @@ precmd () {
     local zero='%([BSUbfksu]|([FB]|){*})'
     local gitst="$(GIT \gs)"
 
-    local left="$YELLOW%M$GREEN$gitst$FINISH$RED$(Jobs)$FINISH$CYAN%~ $FINISH"
+    local HOST="%M"
+    local HOST="Master"
+    local left="$YELLOW$HOST$GREEN$gitst$FINISH$RED$(Jobs)$FINISH$CYAN%~ $FINISH"
     local right="$MAGENTA%D %T"
     local TTY=$(tty)
     TTY=${TTY:9}
@@ -335,6 +336,7 @@ function frain(){
         return
     fi
     cd $1
+    cd $(pwd -P)
     if [[ -n $TMUX ]] then
         tmux rename-window $(basename $(pwd))
     fi
@@ -388,6 +390,7 @@ function grep(){
 alias -g http='curl -o /dev/null -sqv '
 alias pp='\ps h -eo pid,euser,command|grep -v grep|\grep -E --color=auto --binary-file=without-match '
 alias py=python2
+alias scp='scp -c aes256-ctr'
 
 #function curl(){
 #    /usr/bin/curl -o /dev/null $@
@@ -505,4 +508,7 @@ zle -N backward-delete-char check-cmd-backward-delete-char
 
 
 export DEV=1
-export PATH=$PATH:/usr/local/texlive/2016/bin/x86_64-linux
+export PATH=$PATH:/usr/local/bin/
+export PATH=$PATH:$HOME/.local/bin
+
+

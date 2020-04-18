@@ -1,0 +1,33 @@
+function tmux-window-move-u(){
+    tmux select-pane -U
+}
+function tmux-window-move-d(){
+    tmux select-pane -D
+}
+function tmux-window-move-l(){
+    tmux select-pane -L
+}
+function tmux-window-move-r(){
+    tmux select-pane -R
+}
+
+
+zle -N tmux-window-move-u
+zle -N tmux-window-move-d
+zle -N tmux-window-move-l
+zle -N tmux-window-move-r
+
+bindkey -M vicmd  wk tmux-window-move-u
+bindkey -M vicmd  wj tmux-window-move-d
+bindkey -M vicmd  wl tmux-window-move-l
+bindkey -M vicmd  wh tmux-window-move-r
+
+
+function zle-line-init zle-keymap-select {
+    RPS1="${${KEYMAP/vicmd/-- NORMAL --}/(main|viins)/-- INSERT --}"
+    RPS2=$RPS1
+    zle reset-prompt
+}
+
+zle -N zle-line-init
+zle -N zle-keymap-select
