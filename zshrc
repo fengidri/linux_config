@@ -37,11 +37,12 @@ precmd () {
 
     local HOST="%M"
     local HOST="Master"
-    local left="$YELLOW$HOST$GREEN$gitst$FINISH$RED$(Jobs)$FINISH$CYAN%~ $FINISH"
+    PROMPT_LEFT="$YELLOW$HOST$GREEN$gitst$FINISH$RED$(Jobs)$FINISH$CYAN%~ $FINISH"
+
     local right="$MAGENTA%D %T"
     local TTY=$(tty)
     TTY=${TTY:9}
-    local newline="$CYAN%n-$TTY>>$FINISH"
+    local newline="$CYAN%n-${VIMODE}>>$FINISH"
     HBAR=""
 
     local leftsize=${#${(S%%)left//$~zero/}}
@@ -51,7 +52,7 @@ precmd () {
     local mid=$WHITE${(e)FILLBAR}
 
     #PROMPT="$(echo "$WHITE$left$mid$right$FINISH\n$newline")"
-    PROMPT="$(echo "$WHITE$left$FINISH\n$newline")"
+#    PROMPT="$(echo "$WHITE$left$FINISH\n$newline")"
 
     #在 Emacs终端 中使用 Zsh 的一些设置
     if [[ "$TERM" == "dumb" ]]; then
@@ -68,6 +69,11 @@ precmd () {
     #PROMPT=$(echo "$BLUE%M$GREEN%/ $gitbranch$WHITE${(e)FILLBAR} $MAGENTA%D %T$FINISH\n$CYAN%n >>>$FINISH ")
     #PROMPT=$(echo "$left$mid$right\n$CYAN%n >>>$FINISH ")
 }
+
+setopt prompt_subst
+PROMPT='$WHITE$PROMPT_LEFT$FINISH\
+
+$CYAN%n-$RED${VIMODE}$CYAN>>$FINISH'
 #}}}
 
 #标题栏、任务栏样式{{{
