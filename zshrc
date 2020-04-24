@@ -71,9 +71,9 @@ precmd () {
 }
 
 setopt prompt_subst
-PROMPT='$WHITE$PROMPT_LEFT$FINISH\
+PROMPT='$WHITE$PROMPT_LEFT$RED${VIMODE}$FINISH\
 
-$CYAN%n-$RED${VIMODE}$CYAN>>$FINISH'
+$CYAN%n->>$FINISH'
 #}}}
 
 #标题栏、任务栏样式{{{
