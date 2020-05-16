@@ -168,11 +168,12 @@ setopt AUTO_LIST AUTO_MENU
 limit coredumpsize 0
 
 #vim风格 键绑定
-if [[ "X$VIM" == "X" ]];then
-    # no inside the vim term
-    bindkey -v
-fi
+#if [[ "X$VIM" == "X" ]];then
+#    # no inside the vim term
+#    bindkey -v
+#fi
 #设置 [DEL]键 为向后删除
+bindkey -e
 bindkey "\e[3~" delete-char
 bindkey "^R" history-incremental-search-backward
 
@@ -344,7 +345,11 @@ function frain(){
     cd $1
     cd $(pwd -P)
     if [[ -n $TMUX ]] then
-        tmux rename-window $(basename $(pwd))
+        #branch=$(git status -b  --porcelain -u no 2>/dev/null)
+        #title=$(basename $(pwd))${branch:3}
+        title=$(basename $(pwd))
+
+        tmux rename-window $title
     fi
     vim -c "Frain $(pwd)"
 }
@@ -516,5 +521,7 @@ zle -N backward-delete-char check-cmd-backward-delete-char
 export DEV=1
 export PATH=$PATH:/usr/local/bin/
 export PATH=$PATH:$HOME/.local/bin
+
+alias ta='tmux a -t'
 
 

@@ -8,5 +8,5 @@ alias gl="git log --graph \
          -%C(yellow)%d%Creset %s %Cgreen(%cr)\
          %C(bold blue)<%an>%Creset'\
     --abbrev-commit --"
-
+alias gp='git push'
 
