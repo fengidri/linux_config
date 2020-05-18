@@ -9,9 +9,24 @@ import sys
 import hashlib
 
 import tty, termios
+import git
+import subprocess
 
 class g:
     addtional = None
+
+def save_msgid(patch, num):
+    f = get_patch_key_path(num)
+    if os.path.exists(f):
+        return
+
+    for line in open(patch).readlines():
+        line = line.split()
+        if line[0] == 'Message-Id:':
+            msgid = line[1]
+            break
+
+    open(f, 'w').write(msgid)
 
 def input(msg):
     sys.stdout.write(msg)
@@ -40,56 +55,6 @@ def get_patch_key_path(index):
     h = m.hexdigest()
     return os.path.expanduser('~/.kernel_patch/%s' % h)
 
-def commit_change(chash, msg = None):
-    branch = os.popen('git rev-parse --abbrev-ref HEAD').read().strip()
-    print("current branch: %s. goto commit %s. change it." % (branch, chash))
-
-    cmd='git checkout %s' % chash
-    os.system(cmd)
-    if msg:
-        f = '/tmp/tmp-kernel-patch-%s-%s'  % (time.time(), os.getpid())
-        open(f, 'w').write(msg)
-
-        cmd = 'git commit --amend -F %s'% f
-        os.system(cmd)
-    else:
-        cmd='git commit --amend'
-        os.system(cmd)
-
-    cmd='git log --pretty=format:%H -1'
-    new_commit_id = os.popen(cmd).read().strip()
-
-    print("new commit hash: %s. goto back to branch %s, rebase it." % (new_commit_id, branch))
-
-    cmd='git checkout %s' % branch
-    os.system(cmd)
-
-    cmd='git rebase %s' % new_commit_id
-    os.system(cmd)
-
-def save_msgid(patch, num):
-    f = get_patch_key_path(num)
-    if os.path.exists(f):
-        return
-
-    for line in open(patch).readlines():
-        line = line.split()
-        if line[0] == 'Message-Id:':
-            msgid = line[1]
-            break
-
-    open(f, 'w').write(msgid)
-
-def get_commit_hash(num):
-    cmd='git log --pretty=format:%H -' + str(num)
-    lines = os.popen(cmd).readlines()
-    o = []
-    for line in lines:
-        o.append(line.strip())
-    return o
-
-def get_commit_body(chash):
-    return os.popen('git log --pretty=format:%B -1 ' + chash).read()
 
 
 def check_additional(chash):
@@ -97,7 +62,7 @@ def check_additional(chash):
     if not os.path.exists(path):
         return
 
-    body = get_commit_body(chash)
+    body = git.get_commit_body(chash)
 
     if body.find('\n---') > -1:
         return
@@ -111,88 +76,138 @@ def check_additional(chash):
 
     body = body + '\n\n---\n' + g.addtional
 
-    commit_change(chash, body)
+    git.commit_change(chash, body)
+
+def cover_edit(patch):
+    path = os.path.expanduser('~/.kernel_patch/addtion')
+    if os.path.exists(path):
+        c = open(patch).read()
+        if c.find('\n---') == -1:
+            c = c + '\n---\n' + open(path).read()
+            open(patch, 'w').write(c)
+
+    os.system('vim ' + patch)
 
 
-def send_email(patch):
-    cmd = "git send-email %s --no-thread --suppress-cc=all"
-    cmd = cmd % patch
 
-    path = os.path.expanduser('~/.kernel_patch/email')
-    if not os.path.exists(path):
-        return
+
+def make_patch(prefix, num):
+
+    chashs = git.get_commit_hash(num)
+
+
+    if 1 == num:
+        check_additional(chashs[0])
+
+
+    cmd="git format-patch --thread=shallow -%s --subject-prefix '%s'" % (num, prefix)
+
+    if num > 1:
+        cmd = cmd + ' -n --cover-letter'
+
+    f = get_patch_key_path(num)
+    if os.path.exists(f):
+        char = input('Found last msgid, use it as the --in-reply-to Y/N: ')
+        if char == 'y':
+            cmd = cmd + " --in-reply-to '%s'" % open(f).read().strip()
+
+
+    print("make patch by cmd:\n$ %s" % cmd)
+
+    patchs = os.popen(cmd).readlines()
+    patchs = [x.strip() for x in patchs]
+    for p in patchs:
+        print '    ' + p
+
+    if num > 1:
+        print('\n-----------------------------------------------------')
+        print('edit covert')
+        cover_edit(patchs[0])
+
+    print('\n-----------------------------------------------------')
+    print("run ./scripits/checkpatch.pl")
+    for patch in patchs:
+        p = subprocess.Popen(['./scripts/checkpatch.pl', patch], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        o,e = p.communicate()
+        for line in o.split('\n'):
+            if line.startswith('total: '):
+                break
+        print(patch[0:4] + '   ' + line.strip())
+
+
+
+    print('\n-----------------------------------------------------')
+    print('try this: https://www.nounplus.net/grammarcheck/')
+    return patchs
+
+def send_email(patchs):
+    print('\n-----------------------------------------------------')
+    for p in patchs:
+        print p
+
+
+    cmd = "git send-email {patch} --no-thread --suppress-cc=all --quiet"
 
     print cmd
 
-    lines = open(path).readlines()
-    for e in lines:
-        e = e.strip()
-        print ('    ' + e)
-        cmd = cmd + ' ' + e
+    path = os.path.expanduser('~/.kernel_patch/email')
+    if os.path.exists(path):
+        lines = open(path).readlines()
+        for e in lines:
+            e = e.strip()
+            print ('    ' + e)
+            cmd = cmd + ' ' + e
+
+    char = input('Send Email With this cmd: y/n:')
+    if char != 'y':
+        return
+
+    save_msgid(patchs[0], num)
+
+    for patch in patchs:
+        os.system(cmd.format(patch = patch))
 
 
-    os.system(cmd)
+def merge(args):
+    send_email(match_patch(args.prefix, args.num))
 
+def _make_patch(args):
+    prefix = args.prefix
+    num = args.num
 
+    if prefix.find("PATCH") == -1:
+        print("prefix must include PATCH")
+        return
 
+    make_patch(prefix, num)
 
-prefix = sys.argv[1]
-num = 1
-if len(sys.argv) == 3:
-    num = int(sys.argv[2])
-
-if prefix.find("PATCH") == -1:
-    print("prefix must include PATCH")
-    sys.exit(-1)
-
-chashs = get_commit_hash(num)
-
-for h in chashs:
-    check_additional(h)
-
-
-cmd="git format-patch --thread=deep -%s --subject-prefix '%s'" % (num, prefix)
-
-if num > 1:
-    cmd = cmd + ' -n '
-
-f = get_patch_key_path(num)
-print(f)
-if os.path.exists(f):
-    char = input('Found last msgid, use it as the --in-reply-to Y/N: ')
-    if char == 'y':
-        cmd = cmd + " --in-reply-to '%s'" % open(f).read().strip()
-
-
-print("make patch by cmd:\n$ %s" % cmd)
-
-patchs = os.popen(cmd).readlines()
-patchs = [x.strip() for x in patchs]
-for p in patchs:
-    print p
-
-print('\n-----------------------------------------------------')
-print("run ./scripits/checkpatch.pl")
-for patch in patchs:
-    print('---')
-    os.system('./scripts/checkpatch.pl %s | grep total: ' % patch)
+def _send(args):
+    print args.patchs
+    return
+    send_email(args.patchs)
 
 
 
-print('\n-----------------------------------------------------')
-print('try this: https://www.nounplus.net/grammarcheck/')
+
+import argparse
+parser = argparse.ArgumentParser(description="kernel patch")
+subparsers = parser.add_subparsers(title='sub command')
+
+mk = subparsers.add_parser('patch')
+mk.add_argument('prefix', help="patch prefix")
+mk.add_argument('num', help="how many commit used", default=1, type=int)
+mk.set_defaults(func=_make_patch)
+
+send = subparsers.add_parser('send')
+send.add_argument('patchs', help="patch to send", nargs='+')
+send.set_defaults(func=_send)
+
+merge = subparsers.add_parser('merge')
+merge.set_defaults(func=merge)
+
+args = parser.parse_args()
+
+args.func(args)
 
 
-print('\n-----------------------------------------------------')
-
-
-char = input('Send Email Now: y/n:')
-
-if char != 'y':
-    sys.exit(0)
-
-save_msgid(patchs[0], num)
-
-for patch in patchs:
-    send_email(patch)
 
