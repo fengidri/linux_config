@@ -1,0 +1,47 @@
+#!/bin/python2.7
+#encoding: utf8
+
+import git
+import sys
+import time
+
+def change_body(body, lines):
+    body = body.split('\n')
+    o = []
+
+    for line in body:
+        if line.startswith('---'):
+            break
+
+        o.append(line)
+
+    while o[-1].strip() == '':
+        del o[-1]
+
+    o.extend(lines)
+    o.append('')
+
+
+    return '\n'.join(o)
+
+if sys.argv[1].isdigit():
+    num = int(sys.argv[1])
+    reply = sys.argv[2:]
+else:
+    num = 1
+    reply = sys.argv[1:]
+
+log = '/tmp/kernel_acked_%s' % time.time()
+
+hashs = git.get_commit_hash(num)
+i = 1
+for h in hashs:
+    body = git.get_commit_body(h)
+    body = change_body(body, reply)
+    print("%s: %s" % (i, body.split('\n')[0]))
+    git.commit_change(h,  body, log)
+    i += 1
+
+
+print("\nmore info: %s" % log)
+
