@@ -12,6 +12,9 @@ import tty, termios
 import git
 import subprocess
 import re
+import pty
+import fcntl
+import termcolor
 
 class g:
     addtional = None
@@ -105,16 +108,41 @@ def check_in_reply_to(num):
 def check_patch(patchs):
     print('\n-----------------------------------------------------')
     print("run ./scripits/checkpatch.pl")
+
+
     for patch in patchs:
-        p = subprocess.Popen(['./scripts/checkpatch.pl', patch],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        o,e = p.communicate()
+        m, s = pty.openpty()
+        flag = fcntl.fcntl(m, fcntl.F_GETFD)
+        fcntl.fcntl(m, fcntl.F_SETFL, flag | os.O_NONBLOCK)
+
+        p = subprocess.Popen(['./scripts/checkpatch.pl', patch], stdout=s,
+                stderr=s)
+
+        s = ''
+        e = False
+        while True:
+            try:
+                buf = os.read(m, 1024)
+            except OSError:
+                buf = None
+
+            if buf:
+                s = s + buf
+            else:
+                if e:
+                    break
+
+                if p.poll() is not None:
+                    e = True
+
         if p.returncode:
-            for line in o.split('\n'):
+            print('')
+            for line in s.split('\n'):
                 print '| ', line
-            print '> %s fail' % patch
+
+            print '^ %s %s\n' % (patch, termcolor.colored('fail', 'red'))
         else:
-            print '> %s success' % patch
+            print '^ %s %s' % (patch, termcolor.colored('success', 'green'))
 
 def format_patch(prefix, num):
     reply = check_in_reply_to(num)
@@ -153,7 +181,8 @@ def read_cover(path):
         line = line.strip()
         if mode_subject == mode:
             if line.startswith('Subject: '):
-                subject = line
+                index = line.find(']')
+                subject = line[index + 1:].strip()
                 mode = mode_skip_head
             continue
 
@@ -194,32 +223,29 @@ def fill_cover(path, subject=None, blurb=None):
         need_check_addtion = False
 
     for line in lines:
-        line = line.strip()
         if line.startswith('Subject: ') and subject:
-            index = subject.find(']')
-            if index:
-                line.replace(' *** SUBJECT HERE ***', subject[index + 1:])
+            line = line.replace('*** SUBJECT HERE ***', subject)
             o.append(line)
             continue
 
-        if line == '*** BLURB HERE ***':
+        if line == '*** BLURB HERE ***\n':
             if blurb:
                 o.append(blurb)
             else:
                 o.append(line)
 
             if os.path.exists(g.addtional_path):
-                if blurb and blurb.find('\n---\n'):
+                if blurb and blurb.find('\n---\n') > -1:
                     need_check_addtion = False
                 else:
-                    o.append('\n---')
+                    o.append('\n\n---\n')
                     o.append(open(g.addtional_path).read())
                     need_check_addtion = True
             continue
 
         o.append(line)
 
-    open(path, 'w').write('\n'.join(o))
+    open(path, 'w').write(''.join(o))
     return need_check_addtion
 
 
@@ -240,7 +266,8 @@ def make_patchs(prefix, num):
     need = None
 
     if cover_subject:
-        print(cover_subject)
+        print('Subject: ' + cover_subject)
+        print('---')
         print(cover_body)
         print('=================')
 
