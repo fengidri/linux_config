@@ -11,9 +11,11 @@ import hashlib
 import tty, termios
 import git
 import subprocess
+import re
 
 class g:
     addtional = None
+    addtional_path = os.path.expanduser('~/.kernel_patch/addtion')
 
 def save_msgid(patch, num):
     f = get_patch_key_path(num)
@@ -58,7 +60,7 @@ def get_patch_key_path(index):
 
 
 def check_additional(chash):
-    path = os.path.expanduser('~/.kernel_patch/addtion')
+    path = g.addtional_path
     if not os.path.exists(path):
         return
 
@@ -67,10 +69,12 @@ def check_additional(chash):
     if body.find('\n---') > -1:
         return
 
-    if g.addtional:
+    if not g.addtional:
         f = '/tmp/tmp-kernel-patch-%s-%s'  % (time.time(), os.getpid())
         a = open(path).read()
         open(f, 'w').write(a)
+
+        input('need to edit addition. anykey:')
         os.system('vim ' + f )
         g.addtional = open(f).read()
 
@@ -89,56 +93,182 @@ def cover_edit(patch):
     os.system('vim ' + patch)
 
 
-
-
-def make_patch(prefix, num):
-
-    chashs = git.get_commit_hash(num)
-
-
-    if 1 == num:
-        check_additional(chashs[0])
-
-
-    cmd="git format-patch --thread=shallow -%s --subject-prefix '%s'" % (num, prefix)
-
-    if num > 1:
-        cmd = cmd + ' -n --cover-letter'
-
+def check_in_reply_to(num):
     f = get_patch_key_path(num)
     if os.path.exists(f):
         char = input('Found last msgid, use it as the --in-reply-to Y/N: ')
         if char == 'y':
-            cmd = cmd + " --in-reply-to '%s'" % open(f).read().strip()
+            return  " --in-reply-to '%s'" % open(f).read().strip()
 
+    return ''
+
+def check_patch(patchs):
+    print('\n-----------------------------------------------------')
+    print("run ./scripits/checkpatch.pl")
+    for patch in patchs:
+        p = subprocess.Popen(['./scripts/checkpatch.pl', patch],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        o,e = p.communicate()
+        if p.returncode:
+            for line in o.split('\n'):
+                print '| ', line
+            print '> %s fail' % patch
+        else:
+            print '> %s success' % patch
+
+def format_patch(prefix, num):
+    reply = check_in_reply_to(num)
+    cmd="git format-patch  -{num} --subject-prefix '{prefix}' {option}{reply}"
+
+    if num > 1:
+        m = '--thread=shallow -n --cover-letter '
+    else:
+        m = ''
+
+    cmd = cmd.format(num = num, prefix = prefix, option = m, reply = reply)
 
     print("make patch by cmd:\n$ %s" % cmd)
 
     patchs = os.popen(cmd).readlines()
     patchs = [x.strip() for x in patchs]
+
     for p in patchs:
         print '    ' + p
 
-    if num > 1:
-        print('\n-----------------------------------------------------')
-        print('edit covert')
-        cover_edit(patchs[0])
-
-    print('\n-----------------------------------------------------')
-    print("run ./scripits/checkpatch.pl")
-    for patch in patchs:
-        p = subprocess.Popen(['./scripts/checkpatch.pl', patch], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        o,e = p.communicate()
-        for line in o.split('\n'):
-            if line.startswith('total: '):
-                break
-        print(patch[0:4] + '   ' + line.strip())
-
-
-
-    print('\n-----------------------------------------------------')
-    print('try this: https://www.nounplus.net/grammarcheck/')
     return patchs
+
+def read_cover(path):
+    lines = open(path).readlines()
+
+    body = []
+    subject = None
+
+    mode_subject     = 1
+    mode_skip_head   = 2
+    mode_blurb_white = 3
+    mode_blurb_body  = 4
+    mode = mode_subject
+
+    for line in lines:
+        line = line.strip()
+        if mode_subject == mode:
+            if line.startswith('Subject: '):
+                subject = line
+                mode = mode_skip_head
+            continue
+
+        if mode_skip_head == mode:
+            if not line:
+                mode = mode_blurb_white
+                continue
+
+            if re.match('^[a-zA-Z-]+: ', line):
+                continue
+
+            body.append(line)
+            mode = mode_blurb_body
+            continue
+
+        if mode_blurb_white == mode:
+            if not line:
+                continue
+
+            body.append(line)
+            mode = mode_blurb_body
+            continue
+
+        if mode_blurb_body == mode:
+            if re.search(' \(\d+\):$', line):
+                break
+
+            body.append(line)
+
+    return subject, '\n'.join(body)
+
+def fill_cover(path, subject=None, blurb=None):
+    lines = open(path).readlines()
+    o = []
+
+    need_check_addtion = True
+    if not os.path.exists(g.addtional_path):
+        need_check_addtion = False
+
+    for line in lines:
+        line = line.strip()
+        if line.startswith('Subject: ') and subject:
+            index = subject.find(']')
+            if index:
+                line.replace(' *** SUBJECT HERE ***', subject[index + 1:])
+            o.append(line)
+            continue
+
+        if line == '*** BLURB HERE ***':
+            if blurb:
+                o.append(blurb)
+            else:
+                o.append(line)
+
+            if os.path.exists(g.addtional_path):
+                if blurb and blurb.find('\n---\n'):
+                    need_check_addtion = False
+                else:
+                    o.append('\n---')
+                    o.append(open(g.addtional_path).read())
+                    need_check_addtion = True
+            continue
+
+        o.append(line)
+
+    open(path, 'w').write('\n'.join(o))
+    return need_check_addtion
+
+
+def make_patchs(prefix, num):
+    chashs = git.get_commit_hash(num)
+
+    cover_path = '0000-cover-letter.patch'
+    cover_subject = None
+
+    if os.path.exists(cover_path):
+        cover_subject, cover_body = read_cover(cover_path)
+
+
+    patchs = format_patch(prefix, num)
+
+    print('\n------------------------cover-----------------------------')
+
+    need = None
+
+    if cover_subject:
+        print(cover_subject)
+        print(cover_body)
+        print('=================')
+
+        char = input('Use last cover msg y/n:')
+        if char == 'y':
+            need = fill_cover(cover_path, cover_subject, cover_body)
+
+    if None == need:
+        need = fill_cover(cover_path)
+
+    if need:
+        input('need to edit cover for addition. anykey:')
+        os.system('vim ' + cover_path)
+
+    check_patch(patchs)
+    return patchs
+
+def make_patch(prefix):
+    chash = git.get_commit_hash(1)[0]
+    check_additional(chash)
+
+    patchs = format_patch(prefix, 1)
+
+    check_patch(patchs)
+    return patchs
+
+
+
 
 def send_email(patchs):
     print('\n-----------------------------------------------------')
@@ -179,7 +309,10 @@ def _make_patch(args):
         print("prefix must include PATCH")
         return
 
-    make_patch(prefix, num)
+    if 1 == num:
+        make_patch(prefix)
+    else:
+        make_patchs(prefix, num)
 
 def _send(args):
     print args.patchs
@@ -196,6 +329,8 @@ subparsers = parser.add_subparsers(title='sub command')
 mk = subparsers.add_parser('patch')
 mk.add_argument('prefix', help="patch prefix")
 mk.add_argument('num', help="how many commit used", default=1, type=int)
+mk.add_argument('--save-cover', help="use the last 000-0-cover-letter.patch",
+        default=False, type=bool)
 mk.set_defaults(func=_make_patch)
 
 send = subparsers.add_parser('send')
