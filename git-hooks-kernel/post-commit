@@ -1,0 +1,5 @@
+echo "=============checkpatch.pl=============="
+git format-patch -1 --stdout | ./scripts/checkpatch.pl
+
+echo ==================END====================
+echo
