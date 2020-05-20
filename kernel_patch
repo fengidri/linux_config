@@ -19,6 +19,7 @@ import termcolor
 class g:
     addtional = None
     addtional_path = os.path.expanduser('~/.kernel_patch/addtion')
+    patch_test = False
 
 def save_msgid(patch, num):
     f = get_patch_key_path(num)
@@ -252,35 +253,38 @@ def fill_cover(path, subject=None, blurb=None):
 def make_patchs(prefix, num):
     chashs = git.get_commit_hash(num)
 
-    cover_path = '0000-cover-letter.patch'
-    cover_subject = None
+    if not g.patch_test:
+        cover_path = '0000-cover-letter.patch'
+        cover_subject = None
 
-    if os.path.exists(cover_path):
-        cover_subject, cover_body = read_cover(cover_path)
+        if os.path.exists(cover_path):
+            cover_subject, cover_body = read_cover(cover_path)
 
 
-    patchs = format_patch(prefix, num)
+        patchs = format_patch(prefix, num)
 
-    print('\n------------------------cover-----------------------------')
+        print('\n------------------------cover-----------------------------')
 
-    need = None
+        need = None
 
-    if cover_subject:
-        print('Subject: ' + cover_subject)
-        print('---')
-        print(cover_body)
-        print('=================')
+        if cover_subject:
+            print('Subject: ' + cover_subject)
+            print('---')
+            print(cover_body)
+            print('=================')
 
-        char = input('Use last cover msg y/n:')
-        if char == 'y':
-            need = fill_cover(cover_path, cover_subject, cover_body)
+            char = input('Use last cover msg y/n:')
+            if char == 'y':
+                need = fill_cover(cover_path, cover_subject, cover_body)
 
-    if None == need:
-        need = fill_cover(cover_path)
+        if None == need:
+            need = fill_cover(cover_path)
 
-    if need:
-        input('need to edit cover for addition. anykey:')
-        os.system('vim ' + cover_path)
+        if need:
+            input('need to edit cover for addition. anykey:')
+            os.system('vim ' + cover_path)
+    else:
+        patchs = format_patch(prefix, num)
 
     check_patch(patchs)
     return patchs
@@ -332,6 +336,9 @@ def _make_patch(args):
     prefix = args.prefix
     num = args.num
 
+    if args.t:
+        g.patch_test = True
+
     if prefix.find("PATCH") == -1:
         print("prefix must include PATCH")
         return
@@ -358,6 +365,7 @@ mk.add_argument('prefix', help="patch prefix")
 mk.add_argument('num', help="how many commit used", default=1, type=int)
 mk.add_argument('--save-cover', help="use the last 000-0-cover-letter.patch",
         default=False, type=bool)
+mk.add_argument('-t', help="for test, skip edit cover", action="store_true")
 mk.set_defaults(func=_make_patch)
 
 send = subparsers.add_parser('send')
