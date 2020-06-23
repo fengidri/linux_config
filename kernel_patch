@@ -20,19 +20,8 @@ class g:
     addtional = None
     addtional_path = os.path.expanduser('~/.kernel_patch/addtion')
     patch_test = False
-
-def save_msgid(patch, num):
-    f = get_patch_key_path(num)
-    if os.path.exists(f):
-        return
-
-    for line in open(patch).readlines():
-        line = line.split()
-        if line[0] == 'Message-Id:':
-            msgid = line[1]
-            break
-
-    open(f, 'w').write(msgid)
+    upstream = False
+    in_relay_to = None
 
 def input(msg):
     sys.stdout.write(msg)
@@ -59,7 +48,26 @@ def get_patch_key_path(index):
     m.update(branch)
     m.update(path)
     h = m.hexdigest()
-    return os.path.expanduser('~/.kernel_patch/%s' % h)
+    return os.path.expanduser('~/.kernel_patch/msgid/%s' % h)
+
+def save_msgid(patch, num):
+    f = get_patch_key_path(num)
+    if os.path.exists(f):
+        return
+
+    for line in open(patch).readlines():
+        line = line.split(' ', 1).strip()
+        if line[0] == 'Message-Id:':
+            msgid = line[1]
+            break
+
+        if line[0] == 'Subject:':
+            subject = line[1]
+            break
+
+    c = '%s\n%s\n%s\n' % (time.time(), subject, msgid)
+
+    open(f, 'w').write(c)
 
 
 
@@ -78,8 +86,14 @@ def check_additional(chash):
         a = open(path).read()
         open(f, 'w').write(a)
 
-        input('need to edit addition. anykey:')
-        os.system('vim ' + f )
+        c = input(termcolor.colored('>> check addition.', 'yellow') + ' edit:Y noedit: N skip: S:')
+        if c == 'y':
+            os.system('vim ' + f )
+        elif c == 'n':
+            pass
+        else:
+            return
+
         g.addtional = open(f).read()
 
     body = body + '\n\n---\n' + g.addtional
@@ -96,19 +110,32 @@ def cover_edit(patch):
 
     os.system('vim ' + patch)
 
+def step_msg(msg):
+    return termcolor.colored(msg, 'yellow')
 
 def check_in_reply_to(num):
-    f = get_patch_key_path(num)
-    if os.path.exists(f):
-        char = input('Found last msgid, use it as the --in-reply-to Y/N: ')
-        if char == 'y':
-            return  " --in-reply-to '%s'" % open(f).read().strip()
+    if g.in_relay_to:
+        return  " --in-reply-to '%s'" % g.in_relay_to
 
-    return ''
+    f = get_patch_key_path(num)
+    if not os.path.exists(f):
+        return ''
+
+    print(step_msg('>> check message id') + " please input last msgid or N:")
+    while True:
+        msgid = sys.stdin.readline().strip()
+        if len(msgid) == 1:
+            if msgid.lower() == 'n':
+                return ''
+            continue
+
+        return  " --in-reply-to '%s'" % msgid
+
 
 def check_patch(patchs):
     print('\n-----------------------------------------------------')
-    print("run ./scripits/checkpatch.pl")
+
+    print(step_msg(">> run ./scripits/checkpatch.pl"))
 
 
     for patch in patchs:
@@ -147,6 +174,8 @@ def check_patch(patchs):
 
 def format_patch(prefix, num):
     reply = check_in_reply_to(num)
+
+    print(step_msg(">> format-patch."))
     cmd="git format-patch  -{num} --subject-prefix '{prefix}' {option}{reply}"
 
     if num > 1:
@@ -156,7 +185,7 @@ def format_patch(prefix, num):
 
     cmd = cmd.format(num = num, prefix = prefix, option = m, reply = reply)
 
-    print("make patch by cmd:\n$ %s" % cmd)
+    print("\n$ %s" % cmd)
 
     patchs = os.popen(cmd).readlines()
     patchs = [x.strip() for x in patchs]
@@ -291,7 +320,8 @@ def make_patchs(prefix, num):
 
 def make_patch(prefix):
     chash = git.get_commit_hash(1)[0]
-    check_additional(chash)
+    if not g.upstream:
+        check_additional(chash)
 
     patchs = format_patch(prefix, 1)
 
@@ -301,7 +331,7 @@ def make_patch(prefix):
 
 
 
-def send_email(patchs):
+def send_email(patchs, num, email_list_name):
     print('\n-----------------------------------------------------')
     for p in patchs:
         print p
@@ -311,11 +341,17 @@ def send_email(patchs):
 
     print cmd
 
-    path = os.path.expanduser('~/.kernel_patch/email')
+    path = os.path.expanduser('~/.kernel_patch/email/' + email_list_name)
     if os.path.exists(path):
         lines = open(path).readlines()
         for e in lines:
             e = e.strip()
+            if not e:
+                continue
+
+            if e[0] == '#':
+                continue
+
             print ('    ' + e)
             cmd = cmd + ' ' + e
 
@@ -323,57 +359,59 @@ def send_email(patchs):
     if char != 'y':
         return
 
-    save_msgid(patchs[0], num)
 
     for patch in patchs:
         os.system(cmd.format(patch = patch))
 
 
-def merge(args):
-    send_email(match_patch(args.prefix, args.num))
 
 def _make_patch(args):
     prefix = args.prefix
     num = args.num
 
+    g.in_relay_to = args.relay
+
     if args.t:
         g.patch_test = True
+
+    if args.u:
+        g.upstream = True
 
     if prefix.find("PATCH") == -1:
         print("prefix must include PATCH")
         return
 
     if 1 == num:
-        make_patch(prefix)
+        ps = make_patch(prefix)
     else:
-        make_patchs(prefix, num)
+        ps = make_patchs(prefix, num)
 
-def _send(args):
-    print args.patchs
-    return
-    send_email(args.patchs)
+    if args.s:
+        print("\n")
+        print(step_msg(">> send email."))
+        cmd = "email_post -g -t %s  %s" % (args.s, ' '.join(ps))
+        os.system(cmd)
+        save_msgid(ps[0], num)
+
 
 
 
 
 import argparse
 parser = argparse.ArgumentParser(description="kernel patch")
-subparsers = parser.add_subparsers(title='sub command')
 
-mk = subparsers.add_parser('patch')
+mk = parser
 mk.add_argument('prefix', help="patch prefix")
 mk.add_argument('num', help="how many commit used", default=1, type=int)
 mk.add_argument('--save-cover', help="use the last 000-0-cover-letter.patch",
         default=False, type=bool)
 mk.add_argument('-t', help="for test, skip edit cover", action="store_true")
+mk.add_argument('-s', help="send email, special the email list file under ~/.kernel_patch/email/")
+mk.add_argument('-u', help="upstream patch no alibaba patch", action="store_true")
+mk.add_argument('--relay', help="--in-reply-to msgid")
 mk.set_defaults(func=_make_patch)
 
-send = subparsers.add_parser('send')
-send.add_argument('patchs', help="patch to send", nargs='+')
-send.set_defaults(func=_send)
 
-merge = subparsers.add_parser('merge')
-merge.set_defaults(func=merge)
 
 args = parser.parse_args()
 
