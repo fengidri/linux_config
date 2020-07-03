@@ -73,6 +73,7 @@ def mp_git(patchs, t):
     print cmd
     print('')
 
+
     char = input('Send Email With this cmd: y/n:')
     if char != 'y':
         return
@@ -108,6 +109,11 @@ def mp(args):
     if not t.to:
         print("not found to")
         sys.exit(-1)
+
+    print('')
+
+    for p in args.mail:
+        print(p)
 
     print("---------------")
 

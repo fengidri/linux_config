@@ -55,15 +55,16 @@ def save_msgid(patch, num):
     if os.path.exists(f):
         return
 
+    subject = None
+    msgid = None
+
     for line in open(patch).readlines():
-        line = line.split(' ', 1).strip()
+        line = line.split(' ', 1)
         if line[0] == 'Message-Id:':
-            msgid = line[1]
-            break
+            msgid = line[1].strip()
 
         if line[0] == 'Subject:':
-            subject = line[1]
-            break
+            subject = line[1].strip()
 
     c = '%s\n%s\n%s\n' % (time.time(), subject, msgid)
 
@@ -143,8 +144,11 @@ def check_patch(patchs):
         flag = fcntl.fcntl(m, fcntl.F_GETFD)
         fcntl.fcntl(m, fcntl.F_SETFL, flag | os.O_NONBLOCK)
 
-        p = subprocess.Popen(['./scripts/checkpatch.pl', patch], stdout=s,
-                stderr=s)
+        ignore = "FILE_PATH_CHANGES,GIT_COMMIT_ID,COMMIT_LOG_LONG_LINE,COMMIT_MESSAGE,CONFIG_DESCRIPTION,MISSING_SIGN_OFF,NO_AUTHOR_SIGN_OFF,BAD_SIGN_OFF"
+
+        p = subprocess.Popen(['./scripts/checkpatch.pl', '-q', '--show-types', '--ignore', ignore, patch], stdout=s, stderr=s)
+
+
 
         s = ''
         e = False
@@ -315,7 +319,6 @@ def make_patchs(prefix, num):
     else:
         patchs = format_patch(prefix, num)
 
-    check_patch(patchs)
     return patchs
 
 def make_patch(prefix):
@@ -323,12 +326,7 @@ def make_patch(prefix):
     if not g.upstream:
         check_additional(chash)
 
-    patchs = format_patch(prefix, 1)
-
-    check_patch(patchs)
-    return patchs
-
-
+    return format_patch(prefix, 1)
 
 
 def send_email(patchs, num, email_list_name):
@@ -386,6 +384,10 @@ def _make_patch(args):
     else:
         ps = make_patchs(prefix, num)
 
+
+    if not args.skip_checkpatch:
+        check_patch(ps)
+
     if args.s:
         print("\n")
         print(step_msg(">> send email."))
@@ -409,6 +411,7 @@ mk.add_argument('-t', help="for test, skip edit cover", action="store_true")
 mk.add_argument('-s', help="send email, special the email list file under ~/.kernel_patch/email/")
 mk.add_argument('-u', help="upstream patch no alibaba patch", action="store_true")
 mk.add_argument('--relay', help="--in-reply-to msgid")
+mk.add_argument('--skip-checkpatch', help="skip checkpatch", action="store_true")
 mk.set_defaults(func=_make_patch)
 
 
