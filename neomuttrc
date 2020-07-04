@@ -1,0 +1,186 @@
+
+######################################################################################
+
+set mail_check = 120
+set sendmail="/usr/bin/msmtp"
+set hidden_host                           		# 隐藏 host 细节
+set editor="vim"                          		# 用 vim 作编辑器
+set record="~/.sandbox/mail/sent-`date +%Y-%m`"		# 每月发出的信件放在不同的文件里
+set use_from=yes					# 让 msmtp 知道用哪个帐号
+set envelope_from=yes					# 让 mutt 使用 msmtp 的 -f 选项
+set ispell="/usr/local/bin/aspell"			# 英文拼写检查 aspell
+set header_cache="$HOME/.mutt_header_cache"
+
+## 建立信箱
+#set folder="~/.sandbox/mail"				# 邮箱目录
+#set mbox="~/.sandbox/mail/inbox"				# 缺省的邮箱
+#set postponed="~/.sandbox/mail/postponed"		# 推迟发送
+#set alias_file="~/.sandbox/mail/.aliases"		# 别名
+
+set index_format="%{%Y-%m-%d %H:%M} %zs %g %-20.20L %s"
+set folder_format="| %2C | %t %N | %8s | %d | %f"
+
+set include						# 回信时包含原文
+set indent_str="> "					# 回信的引文之前插入符号 >
+
+
+#set arrow_cursor
+
+## Colors
+color normal     white        default
+color attachment yellow       default
+color bold       brightwhite  default
+color underline  default      blue
+color error      brightwhite  default
+color indicator  white        blue
+color message    brightblue   default
+color status     white        default
+color header     brightred    default ^Subject:
+color body       brightwhite  default [\-\.+_a-zA-Z0-9]+@[\-\.a-zA-Z0-9]+
+color body       brightblue   default (https?|ftp)://[\-\.,/%~_:?&=\#a-zA-Z0-9]+
+color index      brightyellow default ~N
+
+## Encoding & Chinese
+set ascii_chars=yes
+set charset="utf-8"
+set send_charset="us-ascii:iso-8859-1:utf-8"
+set rfc2047_parameters=yes
+charset-hook ^iso-8859-1$ gb2312
+charset-hook !utf-8 gb2312
+charset-hook ^us-ascii$ gb2312
+
+## 监视下面几个邮箱，随时报告新邮件
+set check_new=yes
+set mail_check=10
+set timeout=30
+
+set edit_headers=yes                      # Allow to edit mail header
+set nomark_old                            # Mark unread new mail as old
+set copy                                  # Copy of sent mails
+set beep_new=yes                          # Beep on new mail
+set smart_wrap                            # Disallow new line among words
+set nomarkers                             # Don't display carrier return
+set mime_forward                          # Forward MIME attachment
+set pager_index_lines=4                   # 看信时，在 index 留出多少行显示邮件列表？
+set pager_context=3                       # Display 3 lines of context in pager
+set nostrict_threads                      # Lets have some fuzzy threading
+#set wait_key=yes                         # 外部程序退出时，要求用户按键返回
+set sendmail_wait=-1                      # Don't wait around for sendmail
+set fcc_clear                             # Keep fcc's clear of signatues and encryption
+set nopipe_decode                         # Don't decode messages when piping
+set tilde                                 # 过滤带 ~ 的邮件
+set read_inc=100                          # Read counter ticks every 100 msgs
+set write_inc=100                         # Write counter ticks every 100 msgs
+set noconfirmappend                       # Just append, don't hassle me
+set pager_stop                            # Don't skip msgs on next page
+set resolve=yes                           # 按 "t" 或 "D" 时，自动移动光标到下封信件
+set quit=yes                              # 退出时，直接退出
+set postpone=ask-no                       # 推迟发送
+set nomove                                # 邮件保留在 $MAIL
+set delete=ask-yes                        # 删除前询问
+
+set sort = threads
+set strict_threads="yes"
+
+set sort="threads"
+set strict_threads="yes"
+set sort_browser="reverse-date"
+set sort_aux="last-date-received"
+set sort_aux = reverse-last-date-received
+
+ignore *                           #  邮件头
+unignore from date subject to cc
+hdr_order Message-Id: Date From to cc subject
+auto_view text/html application/msword    # 让 mutt 自动浏览邮件中 text/html 的那部分
+#set record = "+INBOX"
+
+# HTML 是最后的选择
+alternative_order text/enriched text/plain text/html
+
+set sidebar_visible=yes
+set sidebar_width=20
+set sidebar_format = '%B%?F? [%F]?%* %?N?%N/?%S'
+
+color normal black default
+#source ~/.mutt/mutt-colors-solarized/mutt-colors-solarized-light-256.muttrc
+source ~/.mutt/gruvbox.rc
+color body green default "^diff \-.*"
+color body green default "> diff \-.*"
+color body green default "^index [a-f0-9].*"
+color body green default "> index [a-f0-9].*"
+color body green default "^\-\-\- .*"
+color body green default "> \-\-\- .*"
+color body green default "^[\+]{3} .*"
+color body green default "> [\+]{3} .*"
+color body cyan default "^[\+][^\+]+.*"
+color body cyan default "> [\+][^\+]+.*"
+color body red  default "^\-[^\-]+.*"
+color body red  default "> \-[^\-]+.*"
+color body brightblue default "^@@ .*"
+color body brightblue default "> @@ .*"
+
+#color index green   default "~p !~N !~T !~F !~P"
+#color index yellow  default   "~p ~N !~T !~F !~P"
+#color index black   red     "~p ~T !~F !~P"
+#color index green   red     "~p ~F !~P"
+
+
+# Entire index line
+color index white black '.*'
+# Author name, %A %a %F %L %n
+# Give the author column a dark grey background
+color index_author color106 color234 '!~P'
+# Highlight a particular from (~f)
+color index_author brightyellow color234 '~P'
+# Message flags, %S %Z
+# Highlight the flags for flagged (~F) emails
+color index_flags default red '~F'
+# Subject, %s
+# Look for a particular subject (~s)
+color index_subject color243 default '!~U'
+color index_subject color100 default '~U'
+color index_subject color130 default '~U ~s Re:'
+color index_subject red default '~v'
+# Number of messages in a collapsed thread, %M
+color index_collapsed default brightblue
+# Date field
+color index_date green default
+# Message label, %y %Y
+color index_label default brightgreen
+# Message number, %C
+color index_number red default
+# Message size, %c %cr %l
+color index_size cyan default
+
+set hide_thread_subject=no
+
+bind pager j next-line
+bind pager <down> next-line
+bind pager k previous-line
+bind pager <up> previous-line
+bind attach,index,pager \CD next-page
+bind attach,index,pager \CU previous-page
+bind pager g top
+bind pager G bottom
+bind pager r  group-chat-reply
+bind attach,index g first-entry
+bind attach,index G last-entry
+
+
+# Move the highlight to the previous mailbox
+bind index,pager \Cp sidebar-prev
+# Move the highlight to the next mailbox
+bind index,pager \Cn sidebar-next
+# Open the highlighted mailbox
+bind index,pager \Co sidebar-open
+bind index,pager <space> next-page
+
+macro index <down> \Cn\Co
+macro index <up> \Cp\Co
+
+macro index,pager <F5> "|git am"
+macro index,pager <F6> "|formail -x message-id > $message_id_file<enter>q"
+
+macro index <F7> "!syncmail\r"
+
+#set pager='vim -R -c "map q :q<cr>"'
