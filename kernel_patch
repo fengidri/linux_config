@@ -122,13 +122,33 @@ def check_in_reply_to(num):
     if not os.path.exists(f):
         return ''
 
-    print(step_msg('>> check message id') + " please input last msgid or N:")
+    msg = " please input last msgid or N or M(use neomutt to select):"
+    print(step_msg('>> check message id'))
+
     while True:
+        print(msg)
+
         msgid = sys.stdin.readline().strip()
-        if len(msgid) == 1:
-            if msgid.lower() == 'n':
-                return ''
-            continue
+        if len(msgid) != 1:
+            break
+
+        if msgid.lower() == 'n':
+            return ''
+
+        if msgid.lower() == 'm':
+            f = '/tmp/message_id_file.%s' % time.time()
+            os.environ['message_id_file'] = f
+
+            print("neomutt will start. save message-id to env $message_id_file.  Y/N:")
+            msgid = sys.stdin.readline().strip()
+            if msgid != 'y':
+                continue
+
+            os.system("neomutt")
+            msgid =  open(f).read().strip()
+            if msgid:
+                print("use message-id from %s" % f)
+                break
 
         return  " --in-reply-to '%s'" % msgid
 
@@ -368,6 +388,9 @@ def _make_patch(args):
     num = args.num
 
     g.in_relay_to = args.relay
+    if g.in_relay_to[0] == '@':
+        g.in_relay_to = open(g.in_relay_to[1:]).read().strip()
+
 
     if args.t:
         g.patch_test = True
@@ -410,7 +433,7 @@ mk.add_argument('--save-cover', help="use the last 000-0-cover-letter.patch",
 mk.add_argument('-t', help="for test, skip edit cover", action="store_true")
 mk.add_argument('-s', help="send email, special the email list file under ~/.kernel_patch/email/")
 mk.add_argument('-u', help="upstream patch no alibaba patch", action="store_true")
-mk.add_argument('--relay', help="--in-reply-to msgid")
+mk.add_argument('--relay', help="--in-reply-to msgid. @ prefix means that is filename of message-id")
 mk.add_argument('--skip-checkpatch', help="skip checkpatch", action="store_true")
 mk.set_defaults(func=_make_patch)
 

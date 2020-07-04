@@ -402,7 +402,18 @@ alias -g http='curl -o /dev/null -sqv '
 alias pp='\ps h -eo pid,euser,command|grep -v grep|\grep -E --color=auto --binary-file=without-match '
 alias py=python2
 alias scp='scp -c aes256-ctr'
-alias mail='syncmail;neomutt'
+
+
+function mail(){
+    syncmail
+    if [[ $? == 1 ]]
+    then
+        echo
+        echo "input any key..."
+        read
+    fi
+    neomutt
+}
 
 #function curl(){
 #    /usr/bin/curl -o /dev/null $@

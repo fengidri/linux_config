@@ -1,3 +1,4 @@
+#!/bin/env python2
 # -*- coding:utf-8 -*-
 
 import json
@@ -8,6 +9,7 @@ import imaplib
 import email
 import time
 import subprocess
+import transfermail
 
 
 class config:
@@ -18,7 +20,9 @@ class config:
     password = None
     folders  = None
     deliver  = None
-    procmail = os.path.join(config.confd, 'procmail.py')
+    saved    = False
+    procmail = os.path.join(confd, 'procmail.py')
+    transfer =  None
 
 def conf():
     path = os.path.expanduser("~/.syncmailrc")
@@ -32,26 +36,47 @@ def conf():
     config.folders = j['folders']
     config.deliver = os.path.expanduser(j['deliver'])
 
+
+    queue = get_dir('sendq')
+    sent = get_dir('sent')
+    config.transfer = transfermail.TransferMail(queue, sent)
+
+
+def get_dir(name):
+    path = os.path.join(config.confd, name)
+    if not os.path.isdir(path):
+        os.mkdir(path)
+
+    return path
+
+
 def sync(conn, fold, last, callback):
     typ, [data] = conn.select('"%s"' % fold)
     if typ != 'OK':
         print("select to folder: %s. fail" % fold)
         sys.exit(-1)
 
-    print("folder [%s]:\t %s %s" % (fold, data, typ))
 
     config.current_total = data
 
     typ, [data] = conn.uid('search', None, 'ALL')
     ids = data.split()
 
+    ii = 0;
     for i in ids:
         i = int(i)
 
         if i <= last:
+            ii += 1
             continue
 
-        resp, data = conn.uid('fetch', "%d" % i, '(RFC822)')
+        break
+
+    print("search %s. %s(%s). last: %s download: %s " % (typ, fold,
+        config.current_total, last, len(ids) - ii))
+
+    for i in ids[ii:]:
+        resp, data = conn.uid('fetch', i, '(RFC822)')
         callback(data)
 
 def get_last_uid():
@@ -92,7 +117,7 @@ def save_uid(uid):
     open(t, 'w').write(uid)
 
 
-def save_mail(dirname, mail, uid):
+def save_mail(dirname, mail, Id, uid):
     path = os.path.join(config.deliver, dirname)
     new = os.path.join(path, 'new')
     if not os.path.isdir(path):
@@ -103,15 +128,22 @@ def save_mail(dirname, mail, uid):
         os.mkdir(t)
         os.mkdir(new)
 
-    filename = "%s-%s.eu6sqa" % (time.time(), uid)
+    filename = "%s-%s.eu6sqa" % (uid, time.time())
 
     path = os.path.join(new, filename)
 
     open(path, 'w').write(mail)
     save_uid(uid)
+    config.saved = True
 
-    print("save email %s:%s/%s to %s" % (config.current_fold, uid,
-        config.current_total, dirname))
+    m = email.message_from_string(mail)
+
+    print("  [save %s/%s to %s] %s" % (
+        Id,
+        config.current_total,
+        dirname,
+        m.get("Subject", '')
+        ))
 
 
 def procmail(mail):
@@ -130,18 +162,36 @@ def procmail(mail):
 
     return o
 
+def tfmail(mail, d):
+    m = email.message_from_string(mail)
+    m.add_header("Resent-To", d)
+
+    mail = m.as_string()
+
+    config.transfer.append(mail)
+
 
 def procmails(maillist):
     for mail in maillist:
         if mail == ')':
             continue
 
+        Id = mail[0].split()[0]
         uid = mail[0].split()[2]
         mail = mail[1]
 
         ds = procmail(mail)
         for d in ds:
-            save_mail(d, mail, uid)
+            if d[0] == '>':
+                d = d[1:].strip()
+                if not d:
+                    continue
+
+                tfmail(mail, d)
+                continue
+
+            save_mail(d, mail, Id, uid)
+
 
 
 
@@ -163,5 +213,26 @@ def main():
         sync(conn, fold, last, procmails)
 
 
-main()
+
+
+import argparse
+parser = argparse.ArgumentParser(description="sync mail")
+parser.add_argument('-l', '--loop', help="loop", action='store_true')
+
+
+args = parser.parse_args()
+
+if args.loop:
+    while True:
+        t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        print("%s syncmail..." % t)
+        main()
+        time.sleep(60)
+else:
+    main()
+    if config.saved:
+        sys.exit(1)
+    else:
+        sys.exit(0)
+
 
