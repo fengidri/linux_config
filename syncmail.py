@@ -142,7 +142,7 @@ def save_mail(dirname, mail, Id, uid):
         Id,
         config.current_total,
         dirname,
-        m.get("Subject", '')
+        m.get("Subject", '').replace('\n', ' ')
         ))
 
 
