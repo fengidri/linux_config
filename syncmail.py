@@ -225,8 +225,14 @@ args = parser.parse_args()
 if args.loop:
     while True:
         t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
         print("%s syncmail..." % t)
-        main()
+
+        try:
+            main()
+        except Exception as e:
+            print e
+
         time.sleep(60)
 else:
     main()
