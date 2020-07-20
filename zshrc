@@ -412,7 +412,7 @@ function mail(){
         echo "input any key..."
         read
     fi
-    neomutt
+    vim -c Mail
 }
 
 #function curl(){
