@@ -405,13 +405,6 @@ alias scp='scp -c aes256-ctr'
 
 
 function mail(){
-    syncmail
-    if [[ $? == 1 ]]
-    then
-        echo
-        echo "input any key..."
-        read
-    fi
     vim -c Mail
 }
 

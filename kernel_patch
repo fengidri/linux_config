@@ -15,15 +15,21 @@ import re
 import pty
 import fcntl
 import termcolor
+import email
+import json
 
 class g:
-    addtional = None
-    addtional_path = os.path.expanduser('~/.kernel_patch/addtion')
-    patch_test   = False
-    upstream     = False
-    in_relay_to  = None
-    msgid_cmd    = None
-    msgid_option = None
+    addtional_path  = os.path.expanduser('~/.kernel_patch/addtion')
+    rundir          = os.path.expanduser('~/.kernel_patch/run')
+    patch_test      = False
+    upstream        = False
+    rmail_from_path = False
+    rmail_from_cmd  = False
+    send_target     = None
+    msgid_cmd       = 'vim -c Mail'
+    msgid_option    = 'MailPrintPath'
+    hashs           = []
+    info            = None
 
 def input(msg):
     sys.stdout.write(msg)
@@ -40,133 +46,428 @@ def input(msg):
 
     return ch.lower()
 
-def get_patch_key_path(index):
-    parent_hash = os.popen('git log --pretty=format:%H -' + str(index + 1)).readlines()[-1].strip()
-    branch = os.popen('git rev-parse --abbrev-ref HEAD').read().strip()
-    path = os.path.realpath(os.getcwd())
-
-    m = hashlib.md5()
-    m.update(parent_hash)
-    m.update(branch)
-    m.update(path)
-    h = m.hexdigest()
-    return os.path.expanduser('~/.kernel_patch/msgid/%s' % h)
-
-def save_msgid(patch, num):
-    f = get_patch_key_path(num)
-    if os.path.exists(f):
-        return
-
-    subject = None
-    msgid = None
-
-    for line in open(patch).readlines():
-        line = line.split(' ', 1)
-        if line[0] == 'Message-Id:':
-            msgid = line[1].strip()
-
-        if line[0] == 'Subject:':
-            subject = line[1].strip()
-
-    c = '%s\n%s\n%s\n' % (time.time(), subject, msgid)
-
-    open(f, 'w').write(c)
-
-
-
-def check_additional(chash):
-    path = g.addtional_path
-    if not os.path.exists(path):
-        return
-
-    body = git.get_commit_body(chash)
-
-    if body.find('\n---') > -1:
-        return
-
-    if not g.addtional:
-        f = '/tmp/tmp-kernel-patch-%s-%s'  % (time.time(), os.getpid())
-        a = open(path).read()
-        open(f, 'w').write(a)
-
-        c = input(termcolor.colored('>> check addition.', 'yellow') + ' edit:Y noedit: N skip: S:')
-        if c == 'y':
-            os.system('vim ' + f )
-        elif c == 'n':
-            pass
-        else:
-            return
-
-        g.addtional = open(f).read()
-
-    body = body + '\n\n---\n' + g.addtional
-
-    git.commit_change(chash, body)
-
-def cover_edit(patch):
-    path = os.path.expanduser('~/.kernel_patch/addtion')
-    if os.path.exists(path):
-        c = open(patch).read()
-        if c.find('\n---') == -1:
-            c = c + '\n---\n' + open(path).read()
-            open(patch, 'w').write(c)
-
-    os.system('vim ' + patch)
-
 def step_msg(msg):
     return termcolor.colored(msg, 'yellow')
 
-def get_reply_from_mutt():
-    f = '/tmp/message_id_file.%s' % time.time()
-    os.environ['message_id_file'] = f
+class Info(object):
+    def __init__(self, hashs):
+        self.hashs = hashs
+        self.run = {}
+        self.path = os.path.join(g.rundir, self.key())
+
+        self.load()
+
+    def load(self):
+
+        if not os.path.isfile(self.path):
+            return
+
+        self.run = json.loads(open(self.path).read())
+
+    def key(self):
+
+        cmd = 'git log --pretty=format:%H -' + str(len(self.hashs) + 1)
+
+        parent_hash = os.popen(cmd).readlines()[-1].strip()
+        branch = os.popen('git rev-parse --abbrev-ref HEAD').read().strip()
+        path = os.path.realpath(os.getcwd())
+
+        m = hashlib.md5()
+        m.update(parent_hash)
+        m.update(branch)
+        m.update(path)
+        h = m.hexdigest()
+
+        return h
+
+    def store(self):
+        self.run['lasttime'] = time.time()
+        c = json.dumps(self.run)
+        open(self.path, 'w').write(c)
+
+    def get(self, key):
+        return self.run.get(key)
+
+    def set(self, key, value):
+        self.run[key] = value
 
 
-    prompt = "%s will start. run: %s Y/N:" % (g.msgid_cmd, g.msgid_option)
-    c = input(prompt)
-    if c != 'y':
-        return
-
-    os.system(g.msgid_cmd)
-    if not os.path.isfile(f):
-        return
-
-    lines = open(f).readlines()
-    subject = lines[0].strip()
-    msgid = lines[1].strip()
-    print("Got MSGID From %s" % g.msgid_cmd)
-    print(" subject: %s" % subject)
-    print(" msgid:   %s" % msgid)
-    if msgid:
-        return msgid
 
 
-def check_in_reply_to(num):
-    if g.in_relay_to:
-        return  " --in-reply-to '%s'" % g.in_relay_to
 
-    f = get_patch_key_path(num)
-    if not os.path.exists(f):
+
+
+class Target(object):
+    def __init__(self, target):
+        to = []
+        cc = []
+
+        path = os.path.expanduser('~/.email_post/target/' + target)
+        if os.path.exists(path):
+            lines = open(path).readlines()
+            for e in lines:
+                e = e.strip()
+                if not e:
+                    continue
+
+                if e[0] == '#':
+                    continue
+
+                t, e = e.split(' ', 1)
+                if t.lower() == 'cc':
+                    cc.append(e)
+                    print("cc: %s" % e)
+
+                if t.lower() == 'to':
+                    to.append(e)
+                    print("to: %s" % e)
+        else:
+            print("no target file: %s" % path)
+            sys.exit(-1)
+
+        self.to = to
+        self.cc = cc
+
+    def format_option(self):
+        o = []
+        for t in self.to:
+            o.append('--to')
+            o.append("'%s'" % t)
+
+        for c in self.cc:
+            o.append('--cc')
+            o.append("'%s'" % c)
+
+        return ' '.join(o)
+
+class RMail(object):
+    def __init__(self, path):
+        mail = email.message_from_file(open(path))
+
+        print("Got Mail %s\n" % path)
+
+        for key in ['Subject', 'Message-Id', 'Date', 'From', 'To', 'Cc']:
+            v = mail.get(key).replace('\n', '').replace('\r', '')
+            print("    %s: %s" % (key.ljust(11), v))
+        print('')
+
+        self.mail = mail
+
+    def format_option(self):
+        o = [ ]
+
+        mail = self.mail
+
+        r = mail.get("Message-Id").strip()
+        if r:
+            o.append('--in-reply-to')
+            o.append("'%s'" % r)
+
+        def add_header(option, key):
+            h = mail.get(key).replace('\n', '').replace('\r', '')
+            for i in h.split(','):
+                i = i.strip()
+                o.append(option)
+                o.append("'%s'" % i.replace("'", '"'))
+
+        add_header('--to', 'From')
+        add_header('--cc', 'Cc')
+        add_header('--cc', 'To')
+
+        return ' '.join(o)
+
+
+class FormatPatch(object):
+    def __init__(self, prefix, num):
+        self.prefix = prefix
+        self.num = num
+
+    def format_patch(self):
+        prefix = self.prefix
+        num = self.num
+
+        print(step_msg(">> format-patch."))
+        cmd="git format-patch  -{num} --subject-prefix '{prefix}' {option} {mail}"
+
+        m = ''
+        if num > 1:
+            m = '--thread=shallow -n --cover-letter '
+
+        cmd = cmd.format(num = num, prefix = prefix, option = m, mail = self.mail_option())
+
+        print("\n$ %s" % cmd)
+
+        patchs = os.popen(cmd).readlines()
+        patchs = [x.strip() for x in patchs]
+
+        for p in patchs:
+            print '    ' + p
+
+        return patchs
+
+    def mail_option(self):
+        mail = self.check_rmail(self.num)
+
+        if mail:
+            return mail.format_option()
+
+        if g.send_target:
+            return Target(g.send_target).format_option()
+
         return ''
 
-    msg = " please input last msgid or N or M(use neomutt to select):"
-    print(step_msg('>> check message id'))
+    def get_reply_to_mail_from_cmd(self):
+        key = 'last_reply_mail_path'
+        path = g.info.get(key)
 
-    while True:
-        print(msg)
+        if path and os.path.isfile(path):
+            print('check last reply mail path: %s' % path)
+            m = RMail(path)
+            c = input("Use It: Y/N:")
+            if c == 'y':
+                return m
 
-        msgid = sys.stdin.readline().strip()
-        if len(msgid) != 1:
-            break
 
-        if msgid.lower() == 'n':
-            return ''
+        f = '/tmp/mail_path.%s' % time.time()
+        os.environ['mail_path'] = f
 
-        if msgid.lower() == 'm':
-            msgid = get_reply_from_mutt()
-            if msgid:
+        prompt = "%s. will start. run: '%s' Y/N:" % (g.msgid_cmd, g.msgid_option)
+        c = input(prompt)
+        if c != 'y':
+            return
+
+        os.system(g.msgid_cmd)
+
+        if not os.path.isfile(f):
+            sys.exit(-1)
+
+        path = open(f).read().strip()
+
+        if not os.path.isfile(path):
+            sys.exit(-1)
+
+        g.info.set(key, path)
+
+        return RMail(path)
+
+
+    def check_rmail(self, num):
+        if g.rmail_from_path:
+            return RMail(g.rmail_from_path)
+
+        if g.rmail_from_cmd:
+            return self.get_reply_to_mail_from_cmd()
+
+        if not g.info.get('send_time'):
+            return
+
+        print(step_msg('>> check message id'))
+
+        msg = "please input reply mail path or N or R(run command):"
+
+        while True:
+            print(msg)
+
+            path = sys.stdin.readline().strip()
+            if len(path) != 1:
+                RMail(path)
                 break
 
-    return  " --in-reply-to '%s'" % msgid
+            if msgid.lower() == 'n':
+                return ''
+
+            if msgid.lower() == 'r':
+                return self.get_reply_to_mail_from_cmd()
+
+        return ''
+
+
+
+class PatchMulti(object):
+    def __init__(self, prefix, num):
+        self.prefix = prefix
+        self.num = num
+
+    def patch(self):
+        prefix = self.prefix
+        num = self.num
+
+        if g.patch_test:
+            return FormatPatch(self.prefix, self.num).format_patch()
+
+        patchs = FormatPatch(self.prefix, self.num).format_patch()
+
+        cover_path = patchs[0]
+
+
+        cover_subject = g.info.get('cover_subject')
+        cover_body    = g.info.get('cover_body')
+
+        additional = os.path.isfile(g.addtional_path)
+
+        if cover_subject:
+            print("Last Cover Message:")
+            print('=' * 70)
+            print('Subject: ' + cover_subject)
+            print('=' * 70)
+            print(cover_body)
+            print('=' * 70)
+
+            char = input('Use last cover msg Y/N: ')
+            if char == 'y':
+               self.fill_cover(cover_path, cover_subject, cover_body)
+               additional = False
+
+        if additional:
+            self.add_additional(cover_path)
+            os.system('vim ' + cover_path)
+        else:
+            c = input('Edit cover: Y/N: ')
+            if c == 'y':
+                os.system('vim ' + cover_path)
+
+        self.read_cover(cover_path)
+
+        return patchs
+
+    def read_cover(self, path):
+        lines = open(path).readlines()
+
+        body = []
+        subject = None
+
+        mode_subject     = 1
+        mode_skip_head   = 2
+        mode_blurb_white = 3
+        mode_blurb_body  = 4
+        mode = mode_subject
+
+        for line in lines:
+            line = line[0:-1]
+            if mode_subject == mode:
+                if line.startswith('Subject: '):
+                    index = line.find(']')
+                    subject = line[index + 1:].strip()
+                    mode = mode_skip_head
+                continue
+
+            if mode_skip_head == mode:
+                if not line:
+                    mode = mode_blurb_white
+                    continue
+
+                continue
+
+            if mode_blurb_white == mode:
+                if not line:
+                    continue
+
+                body.append(line)
+                mode = mode_blurb_body
+                continue
+
+            if mode_blurb_body == mode:
+                if re.search(' \(\d+\):$', line):
+                    break
+
+                body.append(line)
+
+        g.info.set('cover_subject', subject)
+        g.info.set('cover_body', '\n'.join(body))
+
+
+    def fill_cover(self, path, subject=None, blurb=None):
+        lines = open(path).readlines()
+        o = []
+
+        for line in lines:
+            if line.startswith('Subject: ') and subject:
+                line = line.replace('*** SUBJECT HERE ***',
+                        subject.encode('utf8'))
+                o.append(line)
+                continue
+
+            if line == '*** BLURB HERE ***\n':
+                if blurb:
+                    o.append(blurb.encode('utf8'))
+                else:
+                    o.append(line)
+
+                continue
+
+            o.append(line)
+
+        open(path, 'w').write(''.join(o))
+
+    def add_additional(self, path):
+        lines = open(path).readlines()
+        o = []
+        for line in lines:
+            if line == '*** BLURB HERE ***\n':
+                o.append(line)
+                o.append('\n')
+                o.append('---\n')
+                o.append(open(g.addtional_path).read())
+                continue
+
+            o.append(line)
+
+        open(path, 'w').write(''.join(o))
+
+
+class PatchOne(object):
+    def __init__(self, prefix):
+        self.prefix = prefix
+
+    def patch(self):
+        ps =  FormatPatch(self.prefix, 1).format_patch()
+        self.check_additional(ps)
+        return ps
+
+    def check_additional(self, ps):
+        if g.upstream:
+            return
+
+        chash = g.hashs
+
+        path = g.addtional_path
+        if not os.path.exists(path):
+            return
+
+        addtional = g.info.get('addtional').encode('utf8')
+
+        if addtional:
+            print(addtional)
+            c = input('found last addtional. use it Y/N:')
+            if c != 'y':
+                addtional = None
+
+        if not addtional:
+            f = '/tmp/tmp-kernel-patch-%s-%s'  % (time.time(), os.getpid())
+            a = open(path).read()
+            open(f, 'w').write(a)
+
+            c = input(termcolor.colored('>> check addition.', 'yellow') + ' edit:Y noedit: N skip: S:')
+            if c == 'y':
+                os.system('vim ' + f )
+            elif c == 'n':
+                pass
+            else:
+                return
+
+            addtional = open(f).read()
+
+            g.info.set('addtional', addtional)
+
+        for p in ps:
+            lines = open(p).readlines()
+            i = lines.index('---\n')
+            lines.insert(i + 1, '---\n')
+            lines.insert(i + 1, addtional)
+
+            open(p, 'w').write(''.join(lines))
+
+
 
 
 def check_patch(patchs):
@@ -212,196 +513,51 @@ def check_patch(patchs):
         else:
             print '^ %s %s' % (patch, termcolor.colored('success', 'green'))
 
-def format_patch(prefix, num):
-    reply = check_in_reply_to(num)
 
-    print(step_msg(">> format-patch."))
-    cmd="git format-patch  -{num} --subject-prefix '{prefix}' {option}{reply}"
+def process(prefix, num):
 
-    if num > 1:
-        m = '--thread=shallow -n --cover-letter '
+    # gen patch
+    if 1 == num:
+        obj = PatchOne(prefix)
     else:
-        m = ''
+        obj = PatchMulti(prefix, num)
 
-    cmd = cmd.format(num = num, prefix = prefix, option = m, reply = reply)
-
-    print("\n$ %s" % cmd)
-
-    patchs = os.popen(cmd).readlines()
-    patchs = [x.strip() for x in patchs]
-
-    for p in patchs:
-        print '    ' + p
-
-    return patchs
-
-def read_cover(path):
-    lines = open(path).readlines()
-
-    body = []
-    subject = None
-
-    mode_subject     = 1
-    mode_skip_head   = 2
-    mode_blurb_white = 3
-    mode_blurb_body  = 4
-    mode = mode_subject
-
-    for line in lines:
-        line = line.strip()
-        if mode_subject == mode:
-            if line.startswith('Subject: '):
-                index = line.find(']')
-                subject = line[index + 1:].strip()
-                mode = mode_skip_head
-            continue
-
-        if mode_skip_head == mode:
-            if not line:
-                mode = mode_blurb_white
-                continue
-
-            if re.match('^[a-zA-Z-]+: ', line):
-                continue
-
-            body.append(line)
-            mode = mode_blurb_body
-            continue
-
-        if mode_blurb_white == mode:
-            if not line:
-                continue
-
-            body.append(line)
-            mode = mode_blurb_body
-            continue
-
-        if mode_blurb_body == mode:
-            if re.search(' \(\d+\):$', line):
-                break
-
-            body.append(line)
-
-    return subject, '\n'.join(body)
-
-def fill_cover(path, subject=None, blurb=None):
-    lines = open(path).readlines()
-    o = []
-
-    need_check_addtion = True
-    if not os.path.exists(g.addtional_path):
-        need_check_addtion = False
-
-    for line in lines:
-        if line.startswith('Subject: ') and subject:
-            line = line.replace('*** SUBJECT HERE ***', subject)
-            o.append(line)
-            continue
-
-        if line == '*** BLURB HERE ***\n':
-            if blurb:
-                o.append(blurb)
-            else:
-                o.append(line)
-
-            if os.path.exists(g.addtional_path):
-                if blurb and blurb.find('\n---\n') > -1:
-                    need_check_addtion = False
-                else:
-                    o.append('\n\n---\n')
-                    o.append(open(g.addtional_path).read())
-                    need_check_addtion = True
-            continue
-
-        o.append(line)
-
-    open(path, 'w').write(''.join(o))
-    return need_check_addtion
+    ps = obj.patch()
 
 
-def make_patchs(prefix, num):
-    chashs = git.get_commit_hash(num)
+    # check patch
+    if not args.skip_checkpatch:
+        check_patch(ps)
 
-    if not g.patch_test:
-        cover_path = '0000-cover-letter.patch'
-        cover_subject = None
+    if args.s or args.S:
+        print("\n")
+        print(step_msg(">> send email."))
+        for p in ps:
+            print('>>> %s' % p)
+            p = subprocess.Popen(['msmtp', '-t'], stdin = subprocess.PIPE)
+            p.communicate(open(p).read())
 
-        if os.path.exists(cover_path):
-            cover_subject, cover_body = read_cover(cover_path)
-
-
-        patchs = format_patch(prefix, num)
-
-        print('\n------------------------cover-----------------------------')
-
-        need = None
-
-        if cover_subject:
-            print('Subject: ' + cover_subject)
-            print('---')
-            print(cover_body)
-            print('=================')
-
-            char = input('Use last cover msg y/n:')
-            if char == 'y':
-                need = fill_cover(cover_path, cover_subject, cover_body)
-
-        if None == need:
-            need = fill_cover(cover_path)
-
-        if need:
-            input('need to edit cover for addition. anykey:')
-            os.system('vim ' + cover_path)
-    else:
-        patchs = format_patch(prefix, num)
-
-    return patchs
-
-def make_patch(prefix):
-    chash = git.get_commit_hash(1)[0]
-    if not g.upstream:
-        check_additional(chash)
-
-    return format_patch(prefix, 1)
+        g.info.set('send_time', time.time())
 
 
-def send_email(patchs, num, email_list_name):
-    print('\n-----------------------------------------------------')
-    for p in patchs:
-        print p
+def make_patch(args):
+    if args.R:
+        g.rmail_from_path = True
 
+    elif args.r:
+        g.rmail_from_cmd = True
 
-    cmd = "git send-email {patch} --no-thread --suppress-cc=all --quiet"
+    g.send_target = args.s
+    g.patch_test  = args.t
+    g.upstream    = args.u
+    num           = args.num
+    prefix        = args.prefix
 
-    print cmd
-
-    path = os.path.expanduser('~/.kernel_patch/email/' + email_list_name)
-    if os.path.exists(path):
-        lines = open(path).readlines()
-        for e in lines:
-            e = e.strip()
-            if not e:
-                continue
-
-            if e[0] == '#':
-                continue
-
-            print ('    ' + e)
-            cmd = cmd + ' ' + e
-
-    char = input('Send Email With this cmd: y/n:')
-    if char != 'y':
+    if prefix.find("PATCH") == -1:
+        print("prefix must include PATCH")
         return
 
 
-    for patch in patchs:
-        os.system(cmd.format(patch = patch))
-
-
-
-def _make_patch(args):
-    prefix = args.prefix
-    num = args.num
     if num.isdigit():
         num = int(num)
     else:
@@ -409,51 +565,13 @@ def _make_patch(args):
         num = len(lines)
         print("The first commit: %s" % lines[-1].strip())
 
-    g.in_relay_to = args.relay
-    if args.R:
-        g.in_relay_to = 'mail'
+    g.hashs = git.get_commit_hash(num)
 
-    if g.in_relay_to:
-        if g.in_relay_to[0] == '@':
-            g.in_relay_to = open(g.in_relay_to[1:]).read().strip()
-            if g.in_relay_to:
-                print("got message-id: %s" % g.in_relay_to)
-            else:
-                return
+    g.info = Info(g.hashs)
 
-        if g.in_relay_to == 'mail':
-            g.in_relay_to = get_reply_from_mutt()
-            if not g.in_relay_to:
-                return
+    process(args.prefix, args.num)
 
-
-    if args.t:
-        g.patch_test = True
-
-    if args.u:
-        g.upstream = True
-
-    if prefix.find("PATCH") == -1:
-        print("prefix must include PATCH")
-        return
-
-    if 1 == num:
-        ps = make_patch(prefix)
-    else:
-        ps = make_patchs(prefix, num)
-
-
-    if not args.skip_checkpatch:
-        check_patch(ps)
-
-    if args.s:
-        print("\n")
-        print(step_msg(">> send email."))
-        cmd = "email_post -g -t %s  %s" % (args.s, ' '.join(ps))
-        os.system(cmd)
-        save_msgid(ps[0], num)
-
-
+    g.info.store()
 
 
 
@@ -463,18 +581,17 @@ parser = argparse.ArgumentParser(description="kernel patch")
 mk = parser
 mk.add_argument('prefix', help="patch prefix")
 mk.add_argument('num', help="commit num or first commit")
+
 mk.add_argument('--save-cover', help="use the last 000-0-cover-letter.patch",
         default=False, type=bool)
 mk.add_argument('-t', help="for test, skip edit cover", action="store_true")
 mk.add_argument('-s', help="send email, special the email list file under ~/.kernel_patch/email/")
+mk.add_argument('-S', help="send email, depend the replay mail.", action='store_true')
 mk.add_argument('-u', help="upstream patch no alibaba patch", action="store_true")
-mk.add_argument('-r', '--relay', help="""--in-reply-to msgid.
-@ prefix means that is filename of message-id.
-mail means will open mail client to get message-id.
-""")
-mk.add_argument('-R', type=bool)
+mk.add_argument('-r', help='get mail file by cmd', action="store_true")
+mk.add_argument('-R', help='reply mail file', type=bool)
 mk.add_argument('--skip-checkpatch', help="skip checkpatch", action="store_true")
-mk.set_defaults(func=_make_patch)
+mk.set_defaults(func=make_patch)
 
 
 
