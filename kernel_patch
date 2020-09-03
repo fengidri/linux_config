@@ -434,7 +434,9 @@ class PatchOne(object):
         if not os.path.exists(path):
             return
 
-        addtional = g.info.get('addtional').encode('utf8')
+        addtional = g.info.get('addtional')
+        if addtional:
+            addtional = addtional.encode('utf8')
 
         if addtional:
             print(addtional)
@@ -529,15 +531,24 @@ def process(prefix, num):
     if not args.skip_checkpatch:
         check_patch(ps)
 
-    if args.s or args.S:
-        print("\n")
-        print(step_msg(">> send email."))
-        for p in ps:
-            print('>>> %s' % p)
-            p = subprocess.Popen(['msmtp', '-t'], stdin = subprocess.PIPE)
-            p.communicate(open(p).read())
+    if not args.s and not args.S:
+        return
 
-        g.info.set('send_time', time.time())
+    print('')
+
+    c = input('send email now. Y/N:')
+    if c != 'y':
+        return
+
+    print("\n")
+    print(step_msg(">> send email."))
+    for p in ps:
+        print('>>> %s' % p)
+        msmtp = subprocess.Popen(['msmtp', '-t'], stdin = subprocess.PIPE)
+        c = open(p).read()
+        msmtp.communicate(c)
+
+    g.info.set('send_time', time.time())
 
 
 def make_patch(args):
@@ -569,7 +580,7 @@ def make_patch(args):
 
     g.info = Info(g.hashs)
 
-    process(args.prefix, args.num)
+    process(args.prefix, num)
 
     g.info.store()
 
