@@ -91,18 +91,12 @@ class Info(object):
     def set(self, key, value):
         self.run[key] = value
 
-
-
-
-
-
-
 class Target(object):
     def __init__(self, target):
         to = []
         cc = []
 
-        path = os.path.expanduser('~/.email_post/target/' + target)
+        path = os.path.expanduser('~/.kernel_patch/email/' + target)
         if os.path.exists(path):
             lines = open(path).readlines()
             for e in lines:
@@ -130,9 +124,19 @@ class Target(object):
 
     def format_option(self):
         o = []
+        list_id = False
         for t in self.to:
             o.append('--to')
             o.append("'%s'" % t)
+            if not list_id:
+                list_id = True
+                if t.find('<') > -1:
+                    t = t.split('<')[-1][0:-1]
+
+                o.append("--add-header")
+                o.append("'List-ID: <%s>'" % t.replace('@', '.'))
+                o.append("--add-header")
+                o.append("'X-Mailing-List: %s'" % t)
 
         for c in self.cc:
             o.append('--cc')
@@ -187,7 +191,12 @@ class FormatPatch(object):
         num = self.num
 
         print(step_msg(">> format-patch."))
-        cmd="git format-patch  -{num} --subject-prefix '{prefix}' {option} {mail}"
+        cmd="git format-patch  -{num} --subject-prefix '{prefix}' {option} {mail} "
+
+        cmd += " --add-header 'X-Mailer: git-send-email 1.8.3.1'"
+        cmd += " --add-header 'MIME-Version: 1.0'"
+        cmd += " --add-header 'Content-Type: text/plain; charset=us-ascii'"
+        cmd += " --add-header 'Precedence: bulk'"
 
         m = ''
         if num > 1:
@@ -273,10 +282,10 @@ class FormatPatch(object):
                 RMail(path)
                 break
 
-            if msgid.lower() == 'n':
+            if path.lower() == 'n':
                 return ''
 
-            if msgid.lower() == 'r':
+            if path.lower() == 'r':
                 return self.get_reply_to_mail_from_cmd()
 
         return ''
