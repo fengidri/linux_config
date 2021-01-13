@@ -6,6 +6,7 @@ import os
 import sys
 import argparse
 import email
+import termcolor
 
 class g:
     patchdir = "./__patch__/"
@@ -122,14 +123,17 @@ def build_cmd():
         else:
             msgid = header_parse_msgid(g.mail.get("Message-id"))
             print ""
-            print "====== mail(%s) =======" % g.mailpath
+            print termcolor.colored("====== mail(%s) =======" % g.mailpath, 'green')
             if not args.reply:
-                print "Use as reply by -r/--reply. Delete by -R"
+                print termcolor.colored("  Use as reply by -r/--reply. Delete by -R", 'blue')
                 print ''
 
-            print "    From: %s" % g.mail.get("From")
-            print '    Subject: %s' % g.mail.get("Subject").replace('\r', '').replace('\n', '')
-            print "    Message-Id: %s" % msgid
+            key = 'From'
+            print "    %s: %s" % (termcolor.colored(key, 'yellow'), g.mail.get(key))
+            key = 'Subject'
+            print '    %s: %s' % (termcolor.colored(key, 'yellow'), g.mail.get("Subject").replace('\r', '').replace('\n', ''))
+            key = 'Message-Id'
+            print "    %s: %s" % (termcolor.colored(key, 'yellow'), msgid)
             if args.reply:
                 fd.write(g.newline)
                 fd.write(" --in-reply-to='%s'" % msgid)
@@ -139,8 +143,17 @@ def build_cmd():
 
 def dump():
     print ''
-    print '====== dump cmd.sh ========='
+    print termcolor.colored('====== dump cmd.sh =========', 'green')
     print open(g.cmdpath).read()
+
+def check():
+    path = '~/.git-mail-check'
+    path = os.path.expanduser(path)
+    if not os.path.isfile(path):
+        return
+    m = open(path).read().strip()
+    if open(g.cmdpath).read().find(m) > -1:
+        print termcolor.colored(' Do not forget the checklist!!!', 'red')
 
 def main():
     init()
@@ -153,12 +166,13 @@ def main():
         os.system('sh %s' % g.cmdpath)
         return
 
-    print '====== list %s =============' % g.patchdir
+    print termcolor.colored('====== list %s =============' % g.patchdir, 'green')
     for i in os.listdir(g.patchdir):
         print i
 
     build_cmd()
     dump()
+    check()
 
 parser = argparse.ArgumentParser(description="wrap for git send-email")
 parser.add_argument('-l', '--addr-list', help="list addr address list. %s" % g.addrpath, action='store_true')
