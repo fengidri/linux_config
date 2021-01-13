@@ -1,0 +1,26 @@
+#!/bin/bash
+
+if [ -f __patch__/0000-cover-letter.patch ]
+then
+    mv __patch__/0000-cover-letter.patch  /tmp/"$(date)"-cover-letter.patch
+fi
+
+rm  __patch__ -rf
+
+if [[ "X$2" == "X-1" ]]
+then
+    git format-patch --subject-prefix="$1" $2 -o __patch__
+else
+    git format-patch --cover-letter --subject-prefix="$1" $2 -o __patch__
+fi
+
+
+for l in $(ls __patch__)
+do
+    echo
+    echo "=========== $l =============================="
+    ./scripts/checkpatch.pl __patch__/$l
+done
+
+
+

@@ -30,6 +30,10 @@ class g:
     msgid_option    = 'MailPrintPath'
     hashs           = []
     info            = None
+    email_to        = []
+    email_cc        = []
+    send            = False
+
 
 def input(msg):
     sys.stdout.write(msg)
@@ -64,6 +68,9 @@ class Info(object):
 
         self.run = json.loads(open(self.path).read())
 
+        g.email_to = self.run.get("email_to", [])
+        g.email_cc = self.run.get("email_cc", [])
+
     def key(self):
 
         cmd = 'git log --pretty=format:%H -' + str(len(self.hashs) + 1)
@@ -82,6 +89,9 @@ class Info(object):
 
     def store(self):
         self.run['lasttime'] = time.time()
+        self.run['email_to'] = g.email_to
+        self.run['email_cc'] = g.email_cc
+
         c = json.dumps(self.run)
         open(self.path, 'w').write(c)
 
@@ -90,6 +100,85 @@ class Info(object):
 
     def set(self, key, value):
         self.run[key] = value
+
+
+def email_header(to, cc):
+        o = []
+        list_id = False
+        for t in to:
+            o.append("--to '%s'" % t)
+            if not list_id:
+                list_id = True
+                if t.find('<') > -1:
+                    t = t.split('<')[-1][0:-1]
+
+                o.append("--add-header 'List-ID: <%s>'" % t.replace('@', '.'))
+                o.append("--add-header 'X-Mailing-List: %s'" % t)
+
+        for c in cc:
+            o.append("--cc '%s'" % c)
+
+        o.append(" --add-header 'X-Mailer: git-send-email 1.8.3.1'")
+        o.append(" --add-header 'MIME-Version: 1.0'")
+        o.append(" --add-header 'Content-Type: text/plain; charset=us-ascii'")
+        o.append(" --add-header 'Precedence: bulk'")
+
+        return ' \n'.join(o)
+
+
+def email_append():
+    def show():
+        for e in g.email_to:
+            print("  to: %s" % e)
+        for e in g.email_cc:
+            print("  cc: %s" % e)
+
+    print("Email Addr List:")
+    show()
+
+    while True:
+        sys.stdout.write('> ')
+        line =sys.stdin.readline()
+        line = line.strip()
+        if not line:
+            break
+
+        t = line.split(' ', 1)
+        cmd = t[0]
+
+        if cmd == 'show':
+            show()
+            continue
+
+        if cmd == 'help':
+            print("command: ")
+            print("     to: add to email addr")
+            print("     cc: add cc email addr")
+            print("     show: show current email addr")
+            print("     del: delete email addr")
+            continue;
+
+        if len(t) != 2:
+            print("err num")
+            continue
+
+        v = t[1]
+        if cmd == 'del':
+            if v in g.email_to:
+                g.email_to.remove(v)
+            if v in g.email_cc:
+                g.email_cc.remove(v)
+            show()
+            continue
+
+        if cmd == 'to':
+            g.email_to.append(t[1])
+            continue
+        if cmd == 'cc':
+            g.email_cc.append(t[1])
+            continue
+        print("unknow command: %s" % cmd)
+
 
 class Target(object):
     def __init__(self, target):
@@ -123,26 +212,7 @@ class Target(object):
         self.cc = cc
 
     def format_option(self):
-        o = []
-        list_id = False
-        for t in self.to:
-            o.append('--to')
-            o.append("'%s'" % t)
-            if not list_id:
-                list_id = True
-                if t.find('<') > -1:
-                    t = t.split('<')[-1][0:-1]
-
-                o.append("--add-header")
-                o.append("'List-ID: <%s>'" % t.replace('@', '.'))
-                o.append("--add-header")
-                o.append("'X-Mailing-List: %s'" % t)
-
-        for c in self.cc:
-            o.append('--cc')
-            o.append("'%s'" % c)
-
-        return ' '.join(o)
+        return email_header(self.to, self.cc)
 
 class RMail(object):
     def __init__(self, path):
@@ -164,21 +234,23 @@ class RMail(object):
 
         r = mail.get("Message-Id").strip()
         if r:
-            o.append('--in-reply-to')
-            o.append("'%s'" % r)
+            o.append('--in-reply-to: "%s"' % r)
 
-        def add_header(option, key):
-            h = mail.get(key).replace('\n', '').replace('\r', '')
-            for i in h.split(','):
-                i = i.strip()
-                o.append(option)
-                o.append("'%s'" % i.replace("'", '"'))
+        def p(key):
+            h = mail.get(key).replace('\n', '').replace('\r', '').split(',')
+            return [x.strip().replace("'", '"') for x in h]
 
         add_header('--to', 'From')
         add_header('--cc', 'Cc')
         add_header('--cc', 'To')
 
-        return ' '.join(o)
+        to = p('From')
+        cc = p('Cc')
+        t  = p('To')
+        cc.extend(t)
+
+        return ' \n'.join(o) + email_header(to, cc)
+
 
 
 class FormatPatch(object):
@@ -191,21 +263,21 @@ class FormatPatch(object):
         num = self.num
 
         print(step_msg(">> format-patch."))
-        cmd="git format-patch  -{num} --subject-prefix '{prefix}' {option} {mail} "
+        cmd="git format-patch  -{num}\n"
+        cmd += " --subject-prefix '{prefix}'\n "
+        cmd += "{option} {mail} \n"
 
-        cmd += " --add-header 'X-Mailer: git-send-email 1.8.3.1'"
-        cmd += " --add-header 'MIME-Version: 1.0'"
-        cmd += " --add-header 'Content-Type: text/plain; charset=us-ascii'"
-        cmd += " --add-header 'Precedence: bulk'"
 
         m = ''
         if num > 1:
-            m = '--thread=shallow -n --cover-letter '
+            m = '--thread=shallow -n --cover-letter \n'
 
-        cmd = cmd.format(num = num, prefix = prefix, option = m, mail = self.mail_option())
+        cmd = cmd.format(num = num, prefix = prefix,
+                option = m, mail = self.mail_option())
 
         print("\n$ %s" % cmd)
 
+        cmd = cmd.replace('\n', '')
         patchs = os.popen(cmd).readlines()
         patchs = [x.strip() for x in patchs]
 
@@ -222,6 +294,10 @@ class FormatPatch(object):
 
         if g.send_target:
             return Target(g.send_target).format_option()
+
+        if g.send:
+            email_append()
+            return email_header(g.email_to, g.email_cc)
 
         return ''
 
@@ -312,7 +388,10 @@ class PatchMulti(object):
         cover_subject = g.info.get('cover_subject')
         cover_body    = g.info.get('cover_body')
 
-        additional = os.path.isfile(g.addtional_path)
+        if g.upstream:
+            additional = None
+        else:
+            additional = os.path.isfile(g.addtional_path)
 
         if cover_subject:
             print("Last Cover Message:")
@@ -540,7 +619,8 @@ def process(prefix, num):
     if not args.skip_checkpatch:
         check_patch(ps)
 
-    if not args.s and not args.S:
+    # email send
+    if not args.s and not args.S and not args.send:
         return
 
     print('')
@@ -570,6 +650,7 @@ def make_patch(args):
     g.send_target = args.s
     g.patch_test  = args.t
     g.upstream    = args.u
+    g.send        = args.send
     num           = args.num
     prefix        = args.prefix
 
@@ -611,6 +692,8 @@ mk.add_argument('-u', help="upstream patch no alibaba patch", action="store_true
 mk.add_argument('-r', help='get mail file by cmd', action="store_true")
 mk.add_argument('-R', help='reply mail file', type=bool)
 mk.add_argument('--skip-checkpatch', help="skip checkpatch", action="store_true")
+mk.add_argument('--get-maintainer', help="run ./scripts/get_maintainer.pl", action="store_true")
+mk.add_argument('--send', help="send email", action="store_true")
 mk.set_defaults(func=make_patch)
 
 

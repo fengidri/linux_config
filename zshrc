@@ -34,10 +34,23 @@ FINISH="%{$terminfo[sgr0]%}"
 precmd () {
     local zero='%([BSUbfksu]|([FB]|){*})'
     local gitst="$(GIT \gs)"
+    local tmux=""
+    if [ ! -z $TMUX ]
+    then
+        if [ 0 -lt $(tmux list-panes -F '#F' |grep Z -c) ]
+        then
+            tmux="${YELLOW}Tmux$GREEN: zoom. "
+        fi
+    fi
+
+    if [ ! -z $gitst ]
+    then
+        gitst="${YELLOW}GIT$GREEN:$gitst"
+    fi
 
     local HOST="%M"
     local HOST="Master"
-    PROMPT_LEFT="$YELLOW$HOST$GREEN$gitst$FINISH$RED$(Jobs)$FINISH$CYAN%~ $FINISH"
+    PROMPT_LEFT="$YELLOW$HOST ${FINISH}|$GREEN$gitst$tmux$FINISH| $RED$(Jobs)$FINISH$CYAN%~ $FINISH"
 
     local right="$MAGENTA%D %T"
     local TTY=$(tty)
@@ -405,6 +418,7 @@ alias scp='scp -c aes256-ctr'
 
 
 function mail(){
+    #syncmail
     vim -c Mail
 }
 
@@ -528,5 +542,3 @@ export PATH=$PATH:/usr/local/bin/
 export PATH=$PATH:$HOME/.local/bin
 
 alias ta='tmux a -t'
-
-
