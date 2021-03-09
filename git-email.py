@@ -13,6 +13,7 @@ class g:
     cmdpath  = '__patch__/cmd.sh'
     addrpath = '~/.address_list'
     mailpath = '/tmp/mail.link'
+    patch    = '__patch__/*.patch'
     mail = None
     addrlist = []
     newline = ' \\\n    '
@@ -64,7 +65,7 @@ def append(es, tp, e):
     es.append(c)
 
 def get_maintainer():
-    cmd = './scripts/get_maintainer.pl ./__patch__/*.patch'
+    cmd = './scripts/get_maintainer.pl %s' % g.patch
 
     o = []
 
@@ -105,16 +106,21 @@ def build_cmd():
     mo = mail_option(maintainer)
     mo = ' '.join(mo)
 
-    cmd ='git send-email __patch__/*.patch --quiet '
+    cmd ='git send-email --quiet '
 
     fd = open(g.cmdpath, 'w')
 
     fd.write(cmd)
 
+    fd.write(g.newline)
+    fd.write(' %s' % g.patch)
+
     if args.dry:
+        fd.write(g.newline)
         fd.write(' --dry-run')
 
     if not args.maintainer:
+        fd.write(g.newline)
         fd.write(' --suppress-cc=all')
 
     if g.mail:
@@ -128,15 +134,26 @@ def build_cmd():
                 print termcolor.colored("  Use as reply by -r/--reply. Delete by -R", 'blue')
                 print ''
 
+            key = 'Date'
+            print "    %s: %s" % (termcolor.colored(key, 'yellow'), g.mail.get(key))
             key = 'From'
             print "    %s: %s" % (termcolor.colored(key, 'yellow'), g.mail.get(key))
             key = 'Subject'
             print '    %s: %s' % (termcolor.colored(key, 'yellow'), g.mail.get("Subject").replace('\r', '').replace('\n', ''))
             key = 'Message-Id'
             print "    %s: %s" % (termcolor.colored(key, 'yellow'), msgid)
+
             if args.reply:
                 fd.write(g.newline)
                 fd.write(" --in-reply-to='%s'" % msgid)
+
+                if not args.no_reply_addr:
+                    for e in g.mail.get('Cc').split(','):
+                        fd.write(g.newline)
+                        fd.write(" --cc='%s'" % e.strip())
+
+                    fd.write(g.newline)
+                    fd.write(" --to='%s'" % g.mail.get('From'))
 
     fd.write(mo)
     fd.write('\n')
@@ -157,6 +174,10 @@ def check():
 
 def main():
     init()
+
+    if args.patch:
+        g.patch = args.patch
+
     if args.addr_list:
         addrlist()
         return
@@ -174,15 +195,31 @@ def main():
     dump()
     check()
 
-parser = argparse.ArgumentParser(description="wrap for git send-email")
+parser = argparse.ArgumentParser(description="""
+    wrap for git send-email.
+
+    Example:
+        git-email -m -t <to@email>
+        git-email -t 0 -c 1 -c 2
+        git-email --run
+
+        # reply. link mail to /tmp/mail.link firstly.
+        git-email -m -t <to@email> -r
+        git-email -t 0 -c 1 -c 2   -r
+
+"""
+, formatter_class=argparse.RawTextHelpFormatter
+)
 parser.add_argument('-l', '--addr-list', help="list addr address list. %s" % g.addrpath, action='store_true')
 parser.add_argument('-t', '--to', help="add to email. int value for addrlist index.", action='append', default = [])
 parser.add_argument('-c', '--cc', help="add cc email. int value for addrlist index.", action='append', default = [])
 parser.add_argument('-m', '--maintainer',  help="add maintainer", action='store_true')
 parser.add_argument('-r', '--reply',  help="add in-reply-to by %s" % g.mailpath, action='store_true')
+parser.add_argument('--no-reply-addr',  help="not use the addr from reply", action='store_true')
 parser.add_argument('-R', help="remove %s" % g.mailpath, action='store_true')
 parser.add_argument('--dry', help="try. no send", action='store_true')
 parser.add_argument('--run', help="run cmd.sh", action='store_true')
+parser.add_argument('-p', '--patch', help="special patch")
 
 args = parser.parse_args()
 
