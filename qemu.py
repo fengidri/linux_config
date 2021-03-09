@@ -6,6 +6,24 @@ import os
 import sys
 import random
 
+def handle_ssh():
+    path = 'qemu-tap-0-mac.conf'
+    mac = open(path).read().strip()
+
+    arps = os.popen('arp -n').readlines()
+    for line in arps:
+        t = line.split()
+        if t[2] == mac:
+            ip = t[0]
+            break
+
+    cmd = 'ssh root@%s' % ip
+    print cmd
+    print "================"
+    os.system(cmd)
+
+
+
 class Tap(object):
     def __init__(self, taps):
         self.confs = []
@@ -131,7 +149,7 @@ def hda_get(args):
 
 OPT_BASE    = '-nographic --no-reboot'
 OPT_MACHINE = '-machine pc-i440fx-2.1,accel=kvm,usb=off'
-OPT_CPUMEM  = '-cpu host -m 16384 -smp 32,sockets=2,cores=8,threads=2'
+OPT_CPUMEM  = '-cpu host -m 16384 -smp 8,sockets=1,cores=8,threads=1'
 OPT_DISK    = "-drive file=%s,if=virtio"
 
 #############################################################
@@ -171,12 +189,22 @@ def command(args):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-k", '--kernel', help="kernel")
+parser.add_argument('--stop', help="stop before run qemu. wait for recv", action='store_true')
 parser.add_argument('--hda', help="kernel")
 parser.add_argument('--tap', help="special tap name or tap num. auto create tap dev. default 1", action='append', default=['1'])
 parser.add_argument('--vf', help="special vf. like --vf eth1.0", action='append', default=[])
+parser.add_argument("-s", '--ssh', help="ssh to machine", action='store_true')
+
 args = parser.parse_args()
 
+if args.ssh:
+    handle_ssh()
+    sys.exit(0)
+
 cmd = command(args)
-print '==========='
-#os.system(cmd)
+print '================================='
+if args.stop:
+    raw_input('wait for input. \\n end:')
+
+os.system(cmd)
 
