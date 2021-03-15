@@ -6,8 +6,8 @@ import os
 import sys
 import random
 
-def handle_ssh():
-    path = 'qemu-tap-0-mac.conf'
+def handle_ip(d):
+    path = os.path.join(d, 'qemu-tap-0-mac.conf')
     mac = open(path).read().strip()
 
     arps = os.popen('arp -n').readlines()
@@ -16,6 +16,10 @@ def handle_ssh():
         if t[2] == mac:
             ip = t[0]
             break
+    return ip
+
+def handle_ssh():
+    ip = handle_ip('.')
 
     cmd = 'ssh root@%s' % ip
     print cmd
@@ -42,7 +46,7 @@ class Tap(object):
                 self.net_tap(i, tap)
         else:
             for i, t in enumerate(args.tap):
-                self.net_tap(t)
+                self.net_tap(i, t)
 
     def get_free_tap(self):
         cmd = 'ip -details tuntap'
@@ -96,7 +100,7 @@ class Tap(object):
         if os.path.exists(path):
             mac = open(path).read().strip()
         else:
-            mac = '52:55:00:d1:%x:%x' % (random.randrange(0xff), random.randrange(0xff))
+            mac = '52:55:00:d1:%02x:%02x' % (random.randrange(0xff), random.randrange(0xff))
             open(path, 'w').write(mac)
 
         c = "-netdev tap,ifname=%s,id=%s,script=no,downscript=no,queues=4"
@@ -135,9 +139,10 @@ def hda_get(args):
         if f[0] == '.':
             continue
 
-        if f.endswith('.qcow2'):
+
+        if f.endswith('.qcow2') or f.endswith('.vhd'):
             if hda:
-                print("multi qcow2 file")
+                print("multi qcow2/vhd file")
                 sys.exit()
 
             hda = f
@@ -191,15 +196,23 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-k", '--kernel', help="kernel")
 parser.add_argument('--stop', help="stop before run qemu. wait for recv", action='store_true')
 parser.add_argument('--hda', help="kernel")
-parser.add_argument('--tap', help="special tap name or tap num. auto create tap dev. default 1", action='append', default=['1'])
+parser.add_argument('--tap', help="special tap name or tap num. auto create tap dev. default 1", action='append', default=[])
 parser.add_argument('--vf', help="special vf. like --vf eth1.0", action='append', default=[])
 parser.add_argument("-s", '--ssh', help="ssh to machine", action='store_true')
+parser.add_argument('--ip', help="get the ip of the special vm. opt is the vm dir")
 
 args = parser.parse_args()
+
+if args.ip:
+    handle_ip(args.ip)
+    sys.exit(0)
 
 if args.ssh:
     handle_ssh()
     sys.exit(0)
+
+if not args.tap:
+    args.tap = ['1']
 
 cmd = command(args)
 print '================================='
