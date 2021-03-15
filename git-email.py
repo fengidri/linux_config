@@ -163,14 +163,6 @@ def dump():
     print termcolor.colored('====== dump cmd.sh =========', 'green')
     print open(g.cmdpath).read()
 
-def check():
-    path = '~/.git-mail-check'
-    path = os.path.expanduser(path)
-    if not os.path.isfile(path):
-        return
-    m = open(path).read().strip()
-    if open(g.cmdpath).read().find(m) > -1:
-        print termcolor.colored(' Do not forget the checklist!!!', 'red')
 
 def main():
     init()
