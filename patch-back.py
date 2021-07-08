@@ -15,8 +15,6 @@ class g:
     patchdir = '__patch__'
     patch_hash = []
 
-    patch_info = []
-
 def stdout_write(msg, color = None):
     if color:
         msg = termcolor.colored(msg, color)
@@ -24,13 +22,15 @@ def stdout_write(msg, color = None):
     sys.stdout.flush()
 
 
-def found_fix():
-    l_hash = os.popen('git rev-parse HEAD').read().strip()
-    title = os.popen('git log -1 --oneline').read().strip()
+def find_fix(gh, prefix):
+    l_hash = os.popen('git rev-parse %s' % gh).read().strip()
+    title = os.popen('git log %s -1 --oneline' % l_hash).read().strip()
+
+    print("%s. Find Fix For: %s" % (prefix, title))
 
     hsh = l_hash[0:12]
 
-    cmd = 'git log HEAD..%s --grep %s' % (g.head, hsh)
+    cmd = 'git log %s..%s --grep %s' % (l_hash, g.head, hsh)
     lines = os.popen(cmd).readlines()
 
     patchs = []
@@ -49,7 +49,7 @@ def found_fix():
 
     patchs.reverse()
 
-    for patch in patchs:
+    for i, patch in enumerate(patchs):
         l_hash = patch[0].strip().split()[1]
         if l_hash in g.patch_hash:
             continue
@@ -67,27 +67,64 @@ def found_fix():
             stdout_write(l)
 
         print("")
-        msg = "This may be the fix for '%s'.\nUse this? (y/n): " % termcolor.colored(title, "yellow")
+        msg = "This may be the fix for '%s'.\nUse this? (y/n): "
+        t = "%s. %s" % (prefix, title)
+        msg = msg % termcolor.colored(t, "yellow")
         stdout_write(msg)
         c = raw_input().lower()
 
         print("")
 
         if c == 'y':
-            mkpatch(l_hash)
+            g.patch_hash.append(l_hash)
+            find_fix(l_hash, "%s.%d" %(prefix, i + 1))
+
+def find_fix_patch(githash):
+    for gh in githash:
+        l_hash = os.popen('git rev-parse %s' % gh).read().strip()
+        g.patch_hash.append(l_hash)
+
+    for i, gh in enumerate(githash):
+        find_fix(gh, '%d' % (i + 1))
+
+    print('')
+
+def sort_patch():
+    cmdfmt = 'git log --pretty=tformat:"%%H" %s~..%s'
+
+    hs = []
+
+    for gh in g.patch_hash:
+
+        if gh in hs:
+            continue
+
+        cmd = cmdfmt % (gh, g.head)
+        lines = os.popen(cmd).readlines()
+        hs = [x.strip() for x in lines]
+
+    o = []
+
+    hs.reverse()
+
+    for h in hs:
+        if h in g.patch_hash:
+            o.append(h)
+            g.patch_hash.remove(h)
+
+    if g.patch_hash:
+        raise Exception("sort patch: left %s" % g.patch_hash)
+
+    g.patch_hash = o
+
 
 def __mk_patch():
-    info = os.popen('git log -1 --oneline').read()
     l_hash = os.popen('git rev-parse HEAD').read().strip()
-
-    stdout_write("   mkpatch: %s\n" % info, color = "green")
 
     cmd = "git format-patch -1 --start-number %d -o %s" % (g.index, g.patchdir)
     g.index += 1
 
     patch = os.popen(cmd).read().strip()
-
-    g.patch_hash.append(l_hash)
 
     lines = open(patch).readlines()
 
@@ -110,25 +147,16 @@ def __mk_patch():
 
     open(patch, 'w').write(''.join(lines))
 
-    g.patch_info.append(info)
-
-
 def mkpatch(gh):
     info = os.popen('git log %s -1 --oneline' % gh).read().strip()
-    print(">> goto %s" % info)
+    stdout_write("mkpatch: %d. %s\n" % (g.index, info), color = "green")
 
     cmd = 'git checkout %s 2>/dev/null' % gh
     os.system(cmd)
 
     l_hash = os.popen('git rev-parse HEAD').read().strip()
-    if l_hash in g.patch_hash:
-        print("This patch is done.")
-        found_fix()
-        return
 
     __mk_patch()
-
-    found_fix()
 
 def go_back():
     br = g.br
@@ -142,27 +170,20 @@ def sig_handle(si, s):
     go_back()
     sys.exit(-1)
 
-def run(githash):
+def run():
     cmd = 'rm -rf %s' % g.patchdir
     os.system(cmd)
 
-    start_hash = os.popen('git rev-parse HEAD').read().strip()
-    br = os.popen('git branch --show-current').read().strip()
-    g.head = start_hash
-    g.br = br
+    g.br = os.popen('git branch --show-current').read().strip()
 
     signal.signal(signal.SIGINT, sig_handle)
 
-    for gh in githash:
+    for gh in g.patch_hash:
         mkpatch(gh)
 
     go_back()
 
     print('')
-
-    for i, info in enumerate(g.patch_info):
-        msg = "%d. %s" %(i + 1, info[0:-1])
-        print(msg)
 
 def main():
     githash = []
@@ -181,9 +202,11 @@ def main():
         print "patch-back [-e ext info] <githash> [<githash> <githash> ...]"
         return
 
+    g.head = os.popen('git rev-parse HEAD').read().strip()
 
-
-    run(githash)
+    find_fix_patch(githash)
+    sort_patch()
+    run()
 
 main()
 
