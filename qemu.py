@@ -18,10 +18,13 @@ def handle_ip(d):
             break
     return ip
 
-def handle_ssh():
+def handle_ssh(args):
     ip = handle_ip('.')
 
-    cmd = 'ssh root@%s' % ip
+    if args.ssh_dir:
+        cmd = 'ssh root@%s -t "cd %s; bash"' % (ip, args.ssh_dir)
+    else:
+        cmd = 'ssh root@%s' % ip
     print cmd
     print "================"
     os.system(cmd)
@@ -58,9 +61,16 @@ class Tap(object):
         for line in lines:
             if line[0] != '\t':
                 dev = line.split(':')[0]
+                if line.find('0x100') > -1: # this is mutil queue dev
+                    if args.net_queues == 1:
+                        dev = None
+                else:
+                    if args.net_queues > 1:
+                        dev = None
             else:
-                if line.split(':')[-1].strip() == '':
-                    o.append(dev)
+                if line.split(':')[-1].strip() == '': # not used
+                    if dev:
+                        o.append(dev)
                     dev = None
         return o
 
@@ -83,7 +93,11 @@ class Tap(object):
             if tap not in taps:
                 break
             index += 1
-        cmd = 'sudo ip tuntap add %s mode tap multi_queue' % tap
+        print "config for taps..."
+        cmd = 'sudo ip tuntap add %s mode tap' % tap
+        if args.net_queues > 1:
+            cmd += ' multi_queue'
+
         os.system(cmd)
         cmd = 'sudo ip link set %s up' % tap
         os.system(cmd)
@@ -103,10 +117,23 @@ class Tap(object):
             mac = '52:55:00:d1:%02x:%02x' % (random.randrange(0xff), random.randrange(0xff))
             open(path, 'w').write(mac)
 
-        c = "-netdev tap,ifname=%s,id=%s,script=no,downscript=no,queues=4"
+        c = "-netdev tap,ifname=%s,id=%s,script=no,downscript=no"
+        c += ',queues=%d' % args.net_queues
+
+        if not args.no_vhost:
+            c += ",vhostforce=on"
+
+
+        if args.qemu_netdev_opt:
+            c += ',' + args.qemu_netdev_opt
+
         self.confs.append(c % (tap, tap))
 
-        c = "-device virtio-net-pci,netdev=%s,mac=%s,vectors=10,mq=on"
+        c = "-device virtio-net-pci,netdev=%s,mac=%s,mq=on"
+        c += ',vectors=%d' % (args.net_queues * 2 + 1)
+
+        if args.qemu_netdevice_opt:
+            c += ',' + args.qemu_netdevice_opt
         self.confs.append(c % (tap, mac))
 
 def net_vfio(vfname):
@@ -155,7 +182,8 @@ def hda_get(args):
 OPT_BASE    = '-nographic --no-reboot'
 OPT_MACHINE = '-machine pc-i440fx-2.1,accel=kvm,usb=off'
 OPT_CPUMEM  = '-cpu host -m 16384 -smp 8,sockets=1,cores=8,threads=1'
-OPT_DISK    = "-drive file=%s,if=virtio"
+#OPT_DISK    = "-drive file=%s,if=virtio "
+OPT_DISK    = "-drive file=%s "
 
 #############################################################
 
@@ -180,26 +208,37 @@ def command(args):
     #############################################################
 
     if args.kernel:
-        command.append('-kernel %s/arch/x86_64/boot/bzImage' % args.kernel)
+        if os.path.isdir(args.kernel):
+            command.append('-kernel %s/arch/x86_64/boot/bzImage' % args.kernel)
+        else:
+            command.append('-kernel %s' % args.kernel)
 
-        ap =  "-append 'root=/dev/vda1 console=tty console=ttyS0 net.ifnames=0 biosdevname=0 nokaslr mitigations=on virtio_net.napi_tx=1'"
+        ap =  "-append 'root=/dev/sda1 console=tty console=ttyS0 net.ifnames=0 biosdevname=0 nokaslr mitigations=on virtio_net.napi_tx=1'"
 
         command.append(ap)
 
 
     cmd = ' \\\n    '.join(command)
+    if args.gdb:
+        cmd += ' -s'
     print cmd
     return cmd
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-k", '--kernel', help="kernel")
-parser.add_argument('--stop', help="stop before run qemu. wait for recv", action='store_true')
+parser.add_argument('--dump', help="dump cmd before run qemu. ", action='store_true')
 parser.add_argument('--hda', help="kernel")
 parser.add_argument('--tap', help="special tap name or tap num. auto create tap dev. default 1", action='append', default=[])
 parser.add_argument('--vf', help="special vf. like --vf eth1.0", action='append', default=[])
 parser.add_argument("-s", '--ssh', help="ssh to machine", action='store_true')
+parser.add_argument('--ssh-dir', help="ssh auto cd to dir")
+parser.add_argument('--gdb', help="gdb", action='store_true')
 parser.add_argument('--ip', help="get the ip of the special vm. opt is the vm dir")
+parser.add_argument('--no-vhost', help="no use vhost net", action='store_true')
+parser.add_argument('--qemu-netdev-opt')
+parser.add_argument('--qemu-netdevice-opt')
+parser.add_argument('--net-queues', default=4, type=int)
 
 args = parser.parse_args()
 
@@ -208,7 +247,7 @@ if args.ip:
     sys.exit(0)
 
 if args.ssh:
-    handle_ssh()
+    handle_ssh(args)
     sys.exit(0)
 
 if not args.tap:
@@ -216,8 +255,6 @@ if not args.tap:
 
 cmd = command(args)
 print '================================='
-if args.stop:
-    raw_input('wait for input. \\n end:')
-
-os.system(cmd)
+if not args.dump:
+    os.system(cmd)
 
