@@ -50,7 +50,14 @@ precmd () {
 
     local HOST="%M"
     local HOST="Master"
-    PROMPT_LEFT="$YELLOW$HOST ${FINISH}|$GREEN$gitst$tmux$FINISH| $RED$(Jobs)$FINISH$CYAN%~ $FINISH"
+    local PROXY=e
+    if [[ -z $(env |grep PROXY) ]]
+    then
+        PROXY=''
+    else
+        PROXY=' [Proxy On]'
+    fi
+    PROMPT_LEFT="$YELLOW$HOST ${FINISH}|$GREEN$gitst$tmux$FINISH| $RED$(Jobs)$FINISH$CYAN%~ $RED$PROXY$FINISH"
 
     local right="$MAGENTA%D %T"
     local TTY=$(tty)
@@ -367,6 +374,9 @@ function frain(){
     vim -c "Frain $(pwd)"
 }
 
+function git-log(){
+    git log --pretty=format:"%h %C(cyan)%<(20)%an %Creset%as%x09 %Cgreen%s"
+}
 
 function arch(){
     P='/Users/fengidri/vagrant/archlinux/'
@@ -415,6 +425,21 @@ alias -g http='curl -o /dev/null -sqv '
 alias pp='\ps h -eo pid,euser,command|grep -v grep|\grep -E --color=auto --binary-file=without-match '
 alias py=python2
 alias scp='scp -c aes256-ctr'
+
+alias tmux-pull-window="tmux choose-window 'move-window -s %%'"
+alias tmux-pull-pane-v="tmux choose-window 'join-pane -v -s %%'"
+alias tmux-pull-pane-h="tmux choose-window 'join-pane -h -s %%'"
+alias tmux-session="tmux new-session -s "
+
+function proxy (){
+    echo "start cli: shadowsocksr-cli -s 64"
+    echo "update:    shadowsocksr-cli -u"
+    echo "list:      shadowsocksr-cli -l"
+    echo "start env: proxy_on"
+    echo "stop env:  proxy_off"
+}
+alias proxy_on="export ALL_PROXY=socks5://127.0.0.1:1080"
+alias proxy_off="unset ALL_PROXY"
 
 
 function mail(){
