@@ -16,6 +16,7 @@ class g:
     patch    = '__patch__/*.patch'
     mail = None
     addrlist = []
+    addrinfo = []
     newline = ' \\\n    '
 
 def init():
@@ -23,7 +24,14 @@ def init():
 
     for line in open(path).readlines():
         line = line.strip()
-        g.addrlist.append(line)
+        t = line.split('#')
+
+        g.addrlist.append(t[0])
+
+        if len(t) == 1:
+            g.addrinfo.append((t[0], ''))
+        else:
+            g.addrinfo.append((t[0], t[1]))
 
     if os.path.islink(g.mailpath):
         m = open(g.mailpath).read()
@@ -47,8 +55,11 @@ def header_parse_msgid(h):
 
 
 def addrlist():
-    for i, a in enumerate(g.addrlist):
-        print "%d: %s" % (i, a)
+    print g.addrpath
+    for i, l in enumerate(g.addrinfo):
+        name = l[1]
+        addr = l[0]
+        print "%d: %s %s" % (i, addr, name)
 
 def get_addr(a):
     if a.isdigit():
@@ -180,12 +191,15 @@ def main():
         return
 
     print termcolor.colored('====== list %s =============' % g.patchdir, 'green')
-    for i in os.listdir(g.patchdir):
+    fs = os.listdir(g.patchdir)
+    fs.sort()
+    for i in fs:
+        if i[0] == '.':
+            continue
         print i
 
     build_cmd()
     dump()
-    check()
 
 parser = argparse.ArgumentParser(description="""
     wrap for git send-email.
