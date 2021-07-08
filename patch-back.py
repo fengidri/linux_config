@@ -49,7 +49,9 @@ def find_fix(gh, prefix):
 
     patchs.reverse()
 
-    for i, patch in enumerate(patchs):
+    index = 1
+
+    for patch in patchs:
         l_hash = patch[0].strip().split()[1]
         if l_hash in g.patch_hash:
             continue
@@ -66,18 +68,19 @@ def find_fix(gh, prefix):
                 l = l.replace(hsh, termcolor.colored(hsh, "yellow"))
             stdout_write(l)
 
-        print("")
-        msg = "This may be the fix for '%s'.\nUse this? (y/n): "
-        t = "%s. %s" % (prefix, title)
-        msg = msg % termcolor.colored(t, "yellow")
-        stdout_write(msg)
+        print("=" * 80)
+
+        stdout_write("%s. %s\n" % (prefix, title), "yellow")
+        stdout_write("\t%s.%s %s"% (prefix, index, patch[4]), "yellow")
+        stdout_write('\nThis may be the fix. Use this? (y/n): ')
         c = raw_input().lower()
 
         print("")
 
         if c == 'y':
             g.patch_hash.append(l_hash)
-            find_fix(l_hash, "%s.%d" %(prefix, i + 1))
+            find_fix(l_hash, "%s.%d" %(prefix, index))
+            index += 1
 
 def find_fix_patch(githash):
     for gh in githash:
