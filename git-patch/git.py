@@ -4,6 +4,37 @@ import time
 
 import subprocess
 
+def log(end = 'HEAD', num = 1, start = None, grep = None):
+
+    if start:
+        cmd = "git log %s..%s" % (start, end)
+    else:
+        cmd = "git log %s -%d" % (end, num)
+
+    if grep:
+        cmd = cmd + " --grep '%s'" % grep
+
+    lines = os.popen(cmd).readlines()
+
+    patchs = []
+    patch = []
+
+    for line in lines:
+        if line.startswith('commit '):
+            if patch:
+                patchs.append(patch)
+            patch = []
+
+        patch.append(line)
+
+    if patch:
+        patchs.append(patch)
+
+    patchs.reverse()
+
+    return patchs
+
+
 def get_hash(gh = 'HEAD'):
     return os.popen('git rev-parse %s' % gh).read().strip()
 
