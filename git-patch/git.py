@@ -4,6 +4,15 @@ import time
 
 import subprocess
 
+class LogItem(object):
+    def __init__(self, lines):
+        self.hash   = lines[0].split()[-1].strip()
+        self.author = lines[1].split(' ', 1)[-1].strip()
+        self.date   = lines[2].split(' ', 1)[-1].strip()
+        self.title  = lines[4].strip()
+        self.msg    = lines[5:]
+
+
 def log(end = 'HEAD', num = 1, start = None, grep = None):
 
     if start:
@@ -22,13 +31,13 @@ def log(end = 'HEAD', num = 1, start = None, grep = None):
     for line in lines:
         if line.startswith('commit '):
             if patch:
-                patchs.append(patch)
+                patchs.append(LogItem(patch))
             patch = []
 
         patch.append(line)
 
     if patch:
-        patchs.append(patch)
+        patchs.append(LogItem(patch))
 
     patchs.reverse()
 

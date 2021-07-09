@@ -88,13 +88,13 @@ def diff(org_hash, num):
         l1 = log1[i]
         l2 = log2[i]
 
-        t1 = l1[4]
-        t2 = l2[4]
-        print(termcolor.colored("Title: " + t1.strip(), "yellow"))
+        t1 = l1.title
+        t2 = l2.title
+        print(termcolor.colored("Title: " + t1, "yellow"))
         if t2 != t1:
-            print("+ " + t2.strip())
+            print("+ " + t2)
 
-        sys.stdout.writelines(difflib.unified_diff(l1[5:], l2[5:]))
+        sys.stdout.writelines(difflib.unified_diff(l1.msg, l2.msg))
         sys.stdout.flush()
         print('')
 
