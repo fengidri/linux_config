@@ -4,6 +4,9 @@ import time
 
 import subprocess
 
+def get_hash(gh = 'HEAD'):
+    return os.popen('git rev-parse %s' % gh).read().strip()
+
 def commit_amend(msg, log='/dev/null'):
     if msg:
         f = '/tmp/tmp-kernel-patch-%s-%s'  % (time.time(), os.getpid())

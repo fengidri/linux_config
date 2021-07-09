@@ -42,14 +42,3 @@ def main(num, reply):
 
 
 
-import argparse
-parser = argparse.ArgumentParser(description="kernel ack")
-
-mk = parser
-mk.add_argument('-n', help="commit num or first commit")
-mk.add_argument('ack', help="ack", nargs='+')
-
-args = parser.parse_args()
-
-
-main(args.n, args.ack)
