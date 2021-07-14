@@ -6,6 +6,7 @@ import os
 import sys
 import termcolor
 import signal
+import git
 
 
 class g:
@@ -91,6 +92,7 @@ def find_fix_patch(githash):
         find_fix(gh, '%d' % (i + 1))
 
     print('')
+
 
 def sort_patch():
     cmdfmt = 'git log --pretty=tformat:"%%H" %s~..%s'
@@ -198,11 +200,17 @@ def main():
             g.ext_info = sys.argv.pop(1)
             continue
 
+        if a.isdigit():
+            githash = git.hashs(int(a))
+            break
+
         githash.append(a)
 
     if not githash:
         print "make patch for backport."
+        print ""
         print "patch-back [-e ext info] <githash> [<githash> <githash> ...]"
+        print "patch-back [-e ext info] <num>"
         return
 
     g.head = os.popen('git rev-parse HEAD').read().strip()
