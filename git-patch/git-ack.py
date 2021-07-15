@@ -130,11 +130,11 @@ parser = argparse.ArgumentParser(description="git append ack to commit message")
 
 mk = parser
 mk.add_argument('-n', help="commit num. default 1", default = 1, type=int)
-mk.add_argument('-e', help="git edit message mode")
-mk.add_argument('-s', help="git edit sequence mode")
 mk.add_argument('--hash', help="special git commit hash")
 mk.add_argument('--title', help="special git commit title")
 mk.add_argument('ack', help="ack", nargs='*')
+mk.add_argument('-e', help=argparse.SUPPRESS)
+mk.add_argument('-s', help=argparse.SUPPRESS)
 
 args = parser.parse_args()
 
@@ -147,4 +147,6 @@ elif args.s:
 else:
     if args.ack:
         main(args)
+    else:
+        parser.print_help()
 
